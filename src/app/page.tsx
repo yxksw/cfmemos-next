@@ -1,65 +1,231 @@
-import Image from "next/image";
+"use client";
+
+import { useState, useEffect, useCallback } from "react";
+import { siteConfig } from "@/config/site";
+import { getMemos } from "@/lib/api";
+import type { Memo } from "@/types/memo";
+
+import Header from "@/components/Header";
+import Cover from "@/components/Cover";
+import MemoCard from "@/components/MemoCard";
+import Footer from "@/components/Footer";
+import MusicPlayer from "@/components/MusicPlayer";
+import TwikooComments from "@/components/TwikooComments";
+
+import LoginModal from "@/components/modals/LoginModal";
+import UserInfoModal from "@/components/modals/UserInfoModal";
+import FriendsModal from "@/components/modals/FriendsModal";
+import SettingsModal from "@/components/modals/SettingsModal";
+
+import Pagination from "@/components/Pagination";
+import Live2DWidget from "@/components/Live2DWidget";
 
 export default function Home() {
+  const [memos, setMemos] = useState<Memo[]>([]);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [totalCount, setTotalCount] = useState(0);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [authToken, setAuthToken] = useState<string>("");
+
+  // 模态框状态
+  const [showLoginModal, setShowLoginModal] = useState(false);
+  const [showUserModal, setShowUserModal] = useState(false);
+  const [showFriendsModal, setShowFriendsModal] = useState(false);
+  const [showSettingsModal, setShowSettingsModal] = useState(false);
+
+  // 评论展开状态
+  const [expandedComments, setExpandedComments] = useState<number | null>(null);
+
+  // 加载说说列表
+  const loadMemos = useCallback(async () => {
+    setIsLoading(true);
+    try {
+      const limit = siteConfig.pagination.pageSize;
+      const offset = (currentPage - 1) * limit;
+
+      // 先获取总数（通过请求大量数据来估算，或者 API 可能返回总数）
+      // 这里我们先获取当前页数据，同时多获取一条来判断是否有下一页
+      const data = await getMemos({ limit: limit + 1, offset });
+
+      // 判断是否有下一页
+      const hasMore = data.length > limit;
+      const currentPageData = hasMore ? data.slice(0, limit) : data;
+
+      setMemos(currentPageData);
+
+      // 计算总页数（根据当前页和是否有更多数据来估算）
+      if (currentPage === 1) {
+        // 第一页：如果数据少于 limit，总页数就是 1
+        if (currentPageData.length < limit) {
+          setTotalPages(1);
+          setTotalCount(currentPageData.length);
+        } else {
+          // 需要获取更多数据来确定总数
+          // 暂时假设有更多页，直到最后一页
+          setTotalPages(currentPage + (hasMore ? 1 : 0));
+          setTotalCount(hasMore ? limit + 1 : limit);
+        }
+      } else {
+        // 非第一页：根据是否有更多数据更新总页数
+        if (hasMore) {
+          setTotalPages(currentPage + 1);
+        } else {
+          setTotalPages(currentPage);
+        }
+        setTotalCount((currentPage - 1) * limit + currentPageData.length);
+      }
+    } catch (error) {
+      console.error("加载说说失败:", error);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [currentPage]);
+
+  // 初始加载
+  useEffect(() => {
+    loadMemos();
+  }, [loadMemos]);
+
+  // 检查登录状态
+  useEffect(() => {
+    const token = localStorage.getItem("auth_token");
+    if (token) {
+      setAuthToken(token);
+      setIsLoggedIn(true);
+    }
+  }, []);
+
+  // 处理登录
+  const handleLogin = async (username: string, password: string): Promise<boolean> => {
+    try {
+      if (username === "admin" && password === "admin") {
+        const mockToken = "mock_token_" + Date.now();
+        localStorage.setItem("auth_token", mockToken);
+        setAuthToken(mockToken);
+        setIsLoggedIn(true);
+        return true;
+      }
+      return false;
+    } catch {
+      return false;
+    }
+  };
+
+  // 处理退出
+  const handleLogout = () => {
+    localStorage.removeItem("auth_token");
+    setAuthToken("");
+    setIsLoggedIn(false);
+  };
+
+  // 切换评论展开
+  const toggleComments = (memoId: number) => {
+    setExpandedComments(expandedComments === memoId ? null : memoId);
+  };
+
+  // 分页
+  const goToPage = (page: number) => {
+    if (page >= 1 && page <= totalPages) {
+      setCurrentPage(page);
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    }
+  };
+
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
+    <div className="min-h-screen bg-[#f5f5f5] dark:bg-[#1a1a1a] transition-colors duration-300">
+      {/* 顶部导航 */}
+      <Header
+        onFriendsClick={() => setShowFriendsModal(true)}
+      />
+
+      {/* 主内容区 */}
+      <main className="max-w-[576px] mx-auto pb-20">
+        {/* 封面 */}
+        <Cover />
+
+        {/* 个性签名 */}
+        <div className="text-right text-gray-500 dark:text-gray-400 text-base py-2.5 pr-4 bg-white dark:bg-[#1a1a1a] transition-colors duration-300">
+          {siteConfig.author.signature}
+        </div>
+
+        {/* 说说列表容器 */}
+        <div className="mt-0 bg-white dark:bg-[#1a1a1a] rounded-lg overflow-hidden shadow-sm dark:shadow-none transition-colors duration-300">
+          {isLoading ? (
+            <div className="text-center py-8 text-gray-500 dark:text-gray-400">
+              <div className="inline-block w-8 h-8 border-2 border-gray-300 dark:border-gray-600 border-t-[#07c160] rounded-full animate-spin" />
+              <p className="mt-2 text-sm">加载中...</p>
+            </div>
+          ) : memos.length > 0 ? (
+            memos.map((memo) => (
+              <div key={memo.id}>
+                <MemoCard
+                  memo={memo}
+                  onCommentClick={() => toggleComments(memo.id)}
+                />
+                {expandedComments === memo.id && (
+                  <div className="bg-gray-50 dark:bg-[#2d2d2d] px-4 pb-4 ml-10 border-b border-gray-100 dark:border-gray-700 transition-colors duration-300">
+                    <TwikooComments memoId={memo.id} />
+                  </div>
+                )}
+              </div>
+            ))
+          ) : (
+            <div className="text-center py-8 text-gray-500 dark:text-gray-400">
+              暂无说说
+            </div>
+          )}
+        </div>
+
+        {/* 分页 */}
+        <Pagination
+          currentPage={currentPage}
+          totalPages={totalPages}
+          onPageChange={goToPage}
         />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
-        </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
-        </div>
+
+        {/* 数据统计 */}
+        {totalCount > 0 && (
+          <div className="text-center text-xs text-gray-400 dark:text-gray-500 mt-2">
+            共 {totalCount} 条说说，每页 {siteConfig.pagination.pageSize} 条
+          </div>
+        )}
+
+        {/* 底部 */}
+        <Footer />
       </main>
+
+      {/* 音乐播放器 */}
+      <MusicPlayer />
+
+      {/* Live2D 看板娘 */}
+      <Live2DWidget />
+
+      {/* 模态框 */}
+      <LoginModal
+        isOpen={showLoginModal}
+        onClose={() => setShowLoginModal(false)}
+        onLogin={handleLogin}
+      />
+
+      <UserInfoModal
+        isOpen={showUserModal}
+        onClose={() => setShowUserModal(false)}
+        onLogout={handleLogout}
+      />
+
+      <FriendsModal
+        isOpen={showFriendsModal}
+        onClose={() => setShowFriendsModal(false)}
+      />
+
+      <SettingsModal
+        isOpen={showSettingsModal}
+        onClose={() => setShowSettingsModal(false)}
+        isLoggedIn={isLoggedIn}
+        onLogout={handleLogout}
+      />
     </div>
   );
 }
