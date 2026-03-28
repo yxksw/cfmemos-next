@@ -78,6 +78,14 @@ export const siteConfig = {
     // 是否显示离线提示
     showOfflineToast: true,
   },
+
+  // 点赞功能配置
+  likes: {
+    // 是否启用点赞功能
+    enabled: true,
+    // 点赞按钮位置: 'left' 评论左边, 'right' 评论右边
+    position: "left" as "left" | "right",
+  },
 };
 
 export type SiteConfig = typeof siteConfig;
