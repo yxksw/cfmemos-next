@@ -18,6 +18,7 @@ import EditMemoModal from "@/components/modals/EditMemoModal";
 
 import Pagination from "@/components/Pagination";
 import Live2DWidget from "@/components/Live2DWidget";
+import PWAInstallPrompt from "@/components/PWAInstallPrompt";
 
 export default function Home() {
   const [memos, setMemos] = useState<Memo[]>([]);
@@ -240,6 +241,9 @@ export default function Home() {
 
       {/* Live2D 看板娘 */}
       <Live2DWidget />
+
+      {/* PWA 安装提示 */}
+      <PWAInstallPrompt />
 
       {/* 模态框 */}
       <LoginModal

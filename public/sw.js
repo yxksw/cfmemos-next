@@ -8,8 +8,6 @@ const STATIC_ASSETS = [
   '/',
   '/offline',
   '/manifest.json',
-  '/icons/icon-192x192.png',
-  '/icons/icon-512x512.png',
 ];
 
 // 安装 Service Worker
@@ -20,14 +18,18 @@ self.addEventListener('install', (event) => {
     caches.open(STATIC_CACHE)
       .then((cache) => {
         console.log('[Service Worker] Pre-caching static assets');
-        return cache.addAll(STATIC_ASSETS);
+        // 使用 addAll 并捕获错误，避免单个资源失败导致整个缓存失败
+        return Promise.all(
+          STATIC_ASSETS.map(url => 
+            cache.add(url).catch(err => {
+              console.warn('[Service Worker] Failed to cache:', url, err);
+            })
+          )
+        );
       })
       .then(() => {
         console.log('[Service Worker] Skip waiting');
         return self.skipWaiting();
-      })
-      .catch((err) => {
-        console.error('[Service Worker] Pre-caching failed:', err);
       })
   );
 });
@@ -138,7 +140,6 @@ self.addEventListener('fetch', (event) => {
   // API 请求 - 仅网络
   if (isApiRequest(url.href)) {
     event.respondWith(networkOnly(request).catch(() => {
-      // 如果网络失败，返回离线数据或错误
       return new Response(
         JSON.stringify({ error: '离线模式，无法获取最新数据' }),
         {
@@ -154,7 +155,6 @@ self.addEventListener('fetch', (event) => {
   if (isImageRequest(url.href)) {
     event.respondWith(
       cacheFirst(request).catch(() => {
-        // 返回占位图
         return new Response('Image not available', { status: 404 });
       })
     );
@@ -239,8 +239,7 @@ self.addEventListener('notificationclick', (event) => {
   }
 });
 
-// 模拟同步备忘录（实际项目中可以实现真正的同步逻辑）
+// 模拟同步备忘录
 async function syncMemos() {
   console.log('[Service Worker] Syncing memos...');
-  // 这里可以实现离线数据的同步逻辑
 }

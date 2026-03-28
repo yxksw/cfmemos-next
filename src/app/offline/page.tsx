@@ -8,7 +8,13 @@ import { cn } from "@/lib/utils";
 export default function OfflinePage() {
   const router = useRouter();
   const [isDark, setIsDark] = useState(false);
-  const [isOnline, setIsOnline] = useState(false);
+  const [isOnline, setIsOnline] = useState(() => {
+    // 在初始化时读取网络状态，避免在 effect 中同步调用 setState
+    if (typeof navigator !== "undefined") {
+      return navigator.onLine;
+    }
+    return true;
+  });
 
   useEffect(() => {
     // 检测深色模式
@@ -37,8 +43,6 @@ export default function OfflinePage() {
     const handleOffline = () => {
       setIsOnline(false);
     };
-
-    setIsOnline(navigator.onLine);
 
     window.addEventListener("online", handleOnline);
     window.addEventListener("offline", handleOffline);
