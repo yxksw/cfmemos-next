@@ -1,7 +1,24 @@
-const CACHE_NAME = "cfmemos-v3";
-const STATIC_CACHE = "cfmemos-static-v3";
-const DYNAMIC_CACHE = "cfmemos-dynamic-v3";
-const IMAGE_CACHE = "cfmemos-images-v3";
+const CACHE_NAME = "cfmemos-v4";
+const STATIC_CACHE = "cfmemos-static-v4";
+const DYNAMIC_CACHE = "cfmemos-dynamic-v4";
+const IMAGE_CACHE = "cfmemos-images-v4";
+
+// 清理所有旧缓存
+async function clearAllCaches() {
+  const cacheNames = await caches.keys();
+  return Promise.all(
+    cacheNames.map((cacheName) => {
+      if (
+        cacheName !== STATIC_CACHE &&
+        cacheName !== DYNAMIC_CACHE &&
+        cacheName !== IMAGE_CACHE
+      ) {
+        console.log("[Service Worker] Deleting old cache:", cacheName);
+        return caches.delete(cacheName);
+      }
+    }),
+  );
+}
 
 // 需要预缓存的静态资源
 const STATIC_ASSETS = ["/", "/offline", "/manifest.json"];
@@ -36,26 +53,10 @@ self.addEventListener("activate", (event) => {
   console.log("[Service Worker] Activating...");
 
   event.waitUntil(
-    caches
-      .keys()
-      .then((cacheNames) => {
-        return Promise.all(
-          cacheNames.map((cacheName) => {
-            if (
-              cacheName !== STATIC_CACHE &&
-              cacheName !== DYNAMIC_CACHE &&
-              cacheName !== IMAGE_CACHE
-            ) {
-              console.log("[Service Worker] Deleting old cache:", cacheName);
-              return caches.delete(cacheName);
-            }
-          }),
-        );
-      })
-      .then(() => {
-        console.log("[Service Worker] Claiming clients");
-        return self.clients.claim();
-      }),
+    clearAllCaches().then(() => {
+      console.log("[Service Worker] Claiming clients");
+      return self.clients.claim();
+    }),
   );
 });
 
@@ -79,11 +80,12 @@ const isStaticAsset = (url) => {
 const networkFirst = async (request) => {
   try {
     const networkResponse = await fetch(request);
-    if (networkResponse.ok) {
+    // 只缓存成功的响应 (200)
+    if (networkResponse.status === 200) {
       const cache = await caches.open(DYNAMIC_CACHE);
       cache.put(request, networkResponse.clone());
-      return networkResponse;
     }
+    return networkResponse;
   } catch (error) {
     console.log("[Service Worker] Network failed, trying cache:", request.url);
   }
