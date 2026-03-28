@@ -9,7 +9,7 @@ const nextConfig: NextConfig = {
   },
 
   // 输出配置 - 仅在生产构建时使用静态导出
-  output: process.env.NODE_ENV === "production" ? "export" : undefined,
+  output: "export",
   distDir: "dist",
 
   // 尾部斜杠配置
@@ -19,6 +19,9 @@ const nextConfig: NextConfig = {
   devIndicators: {
     appIsrStatus: false,
   },
+
+  // 禁用 Turbopack
+  turbopack: false,
 };
 
 export default nextConfig;

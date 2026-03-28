@@ -1,9 +1,12 @@
 [build]
-  command = "npm run build"
+  command = "npm install && npm run build"
   publish = "dist"
 
 [build.environment]
   NODE_VERSION = "20"
+  NPM_FLAGS = "--legacy-peer-deps"
+  NEXT_TELEMETRY_DISABLED = "1"
+  NEXT_PRIVATE_SKIP_VALIDATION = "1"
 
 [[redirects]]
   from = "/*"
