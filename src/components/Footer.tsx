@@ -18,12 +18,12 @@ export default function Footer() {
         </a>
         <span className="text-[#07c160]">
           <a
-            href="https://xgk.pw"
+            href="https://github.com/yxksw/cfmemos-next"
             className="hover:underline"
             target="_blank"
             rel="noopener noreferrer"
           >
-            XGK
+            源码
           </a>
         </span>
       </div>

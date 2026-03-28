@@ -1,9 +1,26 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { Heart } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { siteConfig } from "@/config/site";
+
+// 简单的提示函数
+function showToast(message: string) {
+  // 创建提示元素
+  const toast = document.createElement("div");
+  toast.className =
+    "fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 " +
+    "bg-black/70 text-white px-4 py-2 rounded-lg text-sm z-[9999] " +
+    "animate-fade-in-out pointer-events-none";
+  toast.textContent = message;
+  document.body.appendChild(toast);
+
+  // 2秒后移除
+  setTimeout(() => {
+    toast.remove();
+  }, 2000);
+}
 
 interface LikeButtonProps {
   memoId: number;
@@ -19,6 +36,7 @@ export default function LikeButton({ memoId, className }: LikeButtonProps) {
   const [likeData, setLikeData] = useState<LikeData>({ count: 0, hasLiked: false });
   const [isLoading, setIsLoading] = useState(false);
   const [isAnimating, setIsAnimating] = useState(false);
+  const pendingRequest = useRef<Promise<void> | null>(null);
 
   // 获取点赞数据
   const fetchLikeData = useCallback(async () => {
@@ -42,61 +60,73 @@ export default function LikeButton({ memoId, className }: LikeButtonProps) {
 
   // 处理点赞/取消点赞
   const handleLike = async () => {
-    if (isLoading) return;
+    // 如果有正在进行的请求，等待它完成
+    if (pendingRequest.current) {
+      return;
+    }
 
     const isUnlike = likeData.hasLiked;
-    setIsLoading(true);
-    setIsAnimating(true);
 
-    // 乐观更新：先更新 UI
-    setLikeData((prev) => ({
-      count: isUnlike ? prev.count - 1 : prev.count + 1,
-      hasLiked: !isUnlike,
-    }));
+    // 创建请求 Promise
+    const requestPromise = (async () => {
+      setIsLoading(true);
+      setIsAnimating(true);
 
-    try {
-      const action = isUnlike ? "unlike" : "like";
-      const response = await fetch("/api/likes", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ memoId, action }),
-      });
+      // 乐观更新：先更新 UI
+      setLikeData((prev) => ({
+        count: isUnlike ? prev.count - 1 : prev.count + 1,
+        hasLiked: !isUnlike,
+      }));
 
-      if (!response.ok) {
-        // 如果请求失败，回滚 UI
+      try {
+        const action = isUnlike ? "unlike" : "like";
+        const response = await fetch("/api/likes", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ memoId, action }),
+        });
+
+        if (!response.ok) {
+          // 如果请求失败，回滚 UI
+          setLikeData((prev) => ({
+            count: isUnlike ? prev.count + 1 : prev.count - 1,
+            hasLiked: isUnlike,
+          }));
+
+          if (response.status === 409) {
+            // 409 只在点赞时出现，表示已经点赞过了
+            if (!isUnlike) {
+              setLikeData((prev) => ({ ...prev, hasLiked: true }));
+              showToast("已点赞，请勿重复点赞");
+            }
+          }
+        } else {
+          // 请求成功，获取最新的数据
+          const data = await response.json();
+          setLikeData({
+            count: data.count,
+            hasLiked: data.hasLiked,
+          });
+        }
+      } catch (error) {
+        console.error("[LikeButton] Failed to update like:", error);
+        // 请求失败，回滚 UI
         setLikeData((prev) => ({
           count: isUnlike ? prev.count + 1 : prev.count - 1,
           hasLiked: isUnlike,
         }));
-
-        if (response.status === 409) {
-          // 409 只在点赞时出现，表示已经点赞过了
-          if (!isUnlike) {
-            setLikeData((prev) => ({ ...prev, hasLiked: true }));
-          }
-        }
-      } else {
-        // 请求成功，获取最新的数据
-        const data = await response.json();
-        setLikeData({
-          count: data.count,
-          hasLiked: data.hasLiked,
-        });
+      } finally {
+        setIsLoading(false);
+        pendingRequest.current = null;
+        // 动画持续 300ms
+        setTimeout(() => setIsAnimating(false), 300);
       }
-    } catch (error) {
-      console.error("[LikeButton] Failed to update like:", error);
-      // 请求失败，回滚 UI
-      setLikeData((prev) => ({
-        count: isUnlike ? prev.count + 1 : prev.count - 1,
-        hasLiked: isUnlike,
-      }));
-    } finally {
-      setIsLoading(false);
-      // 动画持续 300ms
-      setTimeout(() => setIsAnimating(false), 300);
-    }
+    })();
+
+    pendingRequest.current = requestPromise;
+    await requestPromise;
   };
 
   // 如果点赞功能被禁用，不渲染
