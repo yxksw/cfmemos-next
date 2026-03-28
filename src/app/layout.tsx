@@ -96,22 +96,24 @@ export default function RootLayout({
           {children}
         </ThemeProvider>
         
-        {/* Service Worker 注册 */}
-        <Script id="register-sw" strategy="afterInteractive">
-          {`
-            if ('serviceWorker' in navigator) {
-              window.addEventListener('load', function() {
-                navigator.serviceWorker.register('/sw.js')
-                  .then(function(registration) {
-                    console.log('[PWA] Service Worker registered:', registration.scope);
-                  })
-                  .catch(function(error) {
-                    console.log('[PWA] Service Worker registration failed:', error);
-                  });
-              });
-            }
-          `}
-        </Script>
+        {/* Service Worker 注册 - 根据配置决定是否启用 */}
+        {siteConfig.pwa.enabled && (
+          <Script id="register-sw" strategy="afterInteractive">
+            {`
+              if ('serviceWorker' in navigator) {
+                window.addEventListener('load', function() {
+                  navigator.serviceWorker.register('/sw.js')
+                    .then(function(registration) {
+                      console.log('[PWA] Service Worker registered:', registration.scope);
+                    })
+                    .catch(function(error) {
+                      console.log('[PWA] Service Worker registration failed:', error);
+                    });
+                });
+              }
+            `}
+          </Script>
+        )}
       </body>
     </html>
   );

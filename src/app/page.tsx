@@ -26,6 +26,7 @@ export default function Home() {
   const [totalPages, setTotalPages] = useState(1);
   const [totalCount, setTotalCount] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [authToken, setAuthToken] = useState<string>("");
 
@@ -41,6 +42,7 @@ export default function Home() {
   // 加载说说列表
   const loadMemos = useCallback(async () => {
     setIsLoading(true);
+    setError(null);
     try {
       const limit = siteConfig.pagination.pageSize;
       const offset = (currentPage - 1) * limit;
@@ -76,8 +78,9 @@ export default function Home() {
         }
         setTotalCount((currentPage - 1) * limit + currentPageData.length);
       }
-    } catch (error) {
-      console.error("加载说说失败:", error);
+    } catch (err) {
+      console.error("加载说说失败:", err);
+      setError("服务器暂时不可用，请稍后再试");
     } finally {
       setIsLoading(false);
     }
@@ -191,6 +194,21 @@ export default function Home() {
             <div className="text-center py-8 text-gray-500 dark:text-gray-400">
               <div className="inline-block w-8 h-8 border-2 border-gray-300 dark:border-gray-600 border-t-[#07c160] rounded-full animate-spin" />
               <p className="mt-2 text-sm">加载中...</p>
+            </div>
+          ) : error ? (
+            <div className="text-center py-12 text-gray-500 dark:text-gray-400">
+              <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-gray-100 dark:bg-gray-700 flex items-center justify-center">
+                <svg className="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                </svg>
+              </div>
+              <p className="text-base mb-2">{error}</p>
+              <button
+                onClick={loadMemos}
+                className="mt-4 px-4 py-2 bg-[#07c160] hover:bg-[#06ad56] text-white rounded-lg text-sm transition-colors"
+              >
+                重新加载
+              </button>
             </div>
           ) : memos.length > 0 ? (
             memos.map((memo) => (

@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { WifiOff, RefreshCw, Home } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
+import { siteConfig } from "@/config/site";
 
 export default function OfflinePage() {
   const router = useRouter();
@@ -103,7 +104,7 @@ export default function OfflinePage() {
             isDark ? "text-gray-100" : "text-gray-800"
           )}
         >
-          {isOnline ? "网络已恢复" : "您已离线"}
+          {isOnline ? "网络已恢复" : siteConfig.pwa.offlineTitle}
         </h1>
 
         {/* 描述 */}
@@ -115,7 +116,7 @@ export default function OfflinePage() {
         >
           {isOnline
             ? "正在为您重新加载页面..."
-            : "请检查您的网络连接，或稍后再试。已缓存的内容仍可正常浏览。"}
+            : siteConfig.pwa.offlineDescription}
         </p>
 
         {/* 操作按钮 */}

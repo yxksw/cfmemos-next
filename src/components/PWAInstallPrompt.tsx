@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { Download, X, Smartphone } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { siteConfig } from "@/config/site";
 
 interface BeforeInstallPromptEvent extends Event {
   prompt: () => Promise<void>;
@@ -14,6 +15,10 @@ interface NavigatorWithStandalone extends Navigator {
 }
 
 export default function PWAInstallPrompt() {
+  // 如果 PWA 被禁用，不渲染组件
+  if (!siteConfig.pwa.enabled) {
+    return null;
+  }
   const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null);
   const [isVisible, setIsVisible] = useState(false);
   const [isInstalled, setIsInstalled] = useState(false);

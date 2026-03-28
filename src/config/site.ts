@@ -66,6 +66,18 @@ export const siteConfig = {
   // 管理员 TOKEN（用于写说说权限验证）
   // 从环境变量读取，格式: ADMIN_TOKEN=your_token_here
   adminToken: process.env.NEXT_PUBLIC_ADMIN_TOKEN || "",
+
+  // PWA 配置
+  pwa: {
+    // 是否启用 PWA 离线功能
+    enabled: true,
+    // 离线页面标题
+    offlineTitle: "离线模式",
+    // 离线页面描述
+    offlineDescription: "您当前处于离线状态，部分功能可能无法使用",
+    // 是否显示离线提示
+    showOfflineToast: true,
+  },
 };
 
 export type SiteConfig = typeof siteConfig;
