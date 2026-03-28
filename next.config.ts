@@ -13,11 +13,6 @@ const nextConfig: NextConfig = {
 
   // 尾部斜杠配置
   trailingSlash: true,
-
-  // 开发配置
-  devIndicators: {
-    appIsrStatus: false,
-  },
 };
 
 export default nextConfig;
