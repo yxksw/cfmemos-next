@@ -14,6 +14,7 @@
 - 🖱️ 自定义鼠标样式
 - 📡 RSS 订阅
 - ⚡ 支持 SSR / SSG 部署（Vercel / Netlify / EdgeOne / Cloudflare Pages）
+- 📱 PWA 支持（离线访问、添加到主屏幕）
 
 ## 技术栈
 
