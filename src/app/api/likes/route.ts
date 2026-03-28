@@ -105,11 +105,16 @@ export async function POST(request: NextRequest) {
         );
       }
     } else {
-      // 取消点赞
-      await sql`
-        DELETE FROM likes 
-        WHERE memo_id = ${memoId} AND user_fingerprint = ${userFingerprint}
-      `;
+      // 取消点赞 - 使用 try-catch 捕获可能的错误
+      try {
+        await sql`
+          DELETE FROM likes 
+          WHERE memo_id = ${memoId} AND user_fingerprint = ${userFingerprint}
+        `;
+      } catch (error) {
+        console.error("[API] Error deleting like:", error);
+        // 取消点赞失败不影响返回，可能是记录不存在
+      }
     }
     
     // 获取最新的点赞数

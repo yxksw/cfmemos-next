@@ -72,9 +72,18 @@ export default function LikeButton({ memoId, className }: LikeButtonProps) {
         }));
 
         if (response.status === 409) {
-          // 已经点赞过了
-          setLikeData((prev) => ({ ...prev, hasLiked: true }));
+          // 409 只在点赞时出现，表示已经点赞过了
+          if (!isUnlike) {
+            setLikeData((prev) => ({ ...prev, hasLiked: true }));
+          }
         }
+      } else {
+        // 请求成功，获取最新的数据
+        const data = await response.json();
+        setLikeData({
+          count: data.count,
+          hasLiked: data.hasLiked,
+        });
       }
     } catch (error) {
       console.error("[LikeButton] Failed to update like:", error);
