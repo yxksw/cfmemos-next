@@ -13,7 +13,7 @@
 - 🤖 Live2D 看板娘
 - 🖱️ 自定义鼠标样式
 - 📡 RSS 订阅
-- ⚡ 支持 Vercel / EdgeOne 部署
+- ⚡ 支持 Vercel / Netlify / EdgeOne 部署
 
 ## 技术栈
 
@@ -117,6 +117,20 @@ npm run build
 3. 配置环境变量（如需要）
 4. 自动部署
 
+#### Netlify 部署
+
+1. 将代码推送到 GitHub
+2. 在 Netlify 选择 "Add new site" → "Import an existing project"
+3. 选择 GitHub 仓库
+4. 构建设置（已配置在 `netlify.toml` 中）：
+   - 构建命令: `npm run build`
+   - 发布目录: `dist`
+5. 点击 "Deploy site"
+
+**手动配置（可选）**：
+- 环境变量：在 Site settings → Environment variables 中添加 `NODE_ENV=production`
+- 自定义域名：在 Domain settings 中配置
+
 #### EdgeOne Pages 部署
 
 1. 将代码推送到 GitHub
@@ -160,6 +174,7 @@ cfmemos-next/
 │   ├── cursor.ico        # 自定义鼠标样式
 │   └── default.cur       # 自定义鼠标样式（备用）
 ├── next.config.ts        # Next.js 配置
+├── netlify.toml          # Netlify 配置
 ├── vercel.json           # Vercel 配置
 └── package.json
 ```
