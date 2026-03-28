@@ -1,7 +1,7 @@
-const CACHE_NAME = "cfmemos-v2";
-const STATIC_CACHE = "cfmemos-static-v2";
-const DYNAMIC_CACHE = "cfmemos-dynamic-v2";
-const IMAGE_CACHE = "cfmemos-images-v2";
+const CACHE_NAME = "cfmemos-v3";
+const STATIC_CACHE = "cfmemos-static-v3";
+const DYNAMIC_CACHE = "cfmemos-dynamic-v3";
+const IMAGE_CACHE = "cfmemos-images-v3";
 
 // 需要预缓存的静态资源
 const STATIC_ASSETS = ["/", "/offline", "/manifest.json"];
@@ -99,19 +99,26 @@ const networkFirst = async (request) => {
 // 缓存优先策略
 const cacheFirst = async (request) => {
   const cachedResponse = await caches.match(request);
-  if (cachedResponse) {
-    return cachedResponse;
-  }
 
   try {
     const networkResponse = await fetch(request);
-    if (networkResponse.ok) {
+    // 只缓存成功的响应 (200)
+    if (networkResponse.status === 200) {
       const cache = await caches.open(IMAGE_CACHE);
       cache.put(request, networkResponse.clone());
+      return networkResponse;
+    }
+    // 如果网络请求失败但有缓存，返回缓存
+    if (cachedResponse) {
+      return cachedResponse;
     }
     return networkResponse;
   } catch (error) {
-    console.log("[Service Worker] Cache and network both failed:", request.url);
+    console.log("[Service Worker] Network failed, trying cache:", request.url);
+    // 网络失败时返回缓存
+    if (cachedResponse) {
+      return cachedResponse;
+    }
     throw error;
   }
 };
