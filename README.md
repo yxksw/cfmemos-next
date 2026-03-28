@@ -35,6 +35,17 @@ npm install
 
 ### 2. 配置
 
+#### 环境变量
+
+创建 `.env.local` 文件（参考 `.env.local.example`）：
+
+```bash
+# 管理员 TOKEN（用于写说说权限验证）
+NEXT_PUBLIC_ADMIN_TOKEN=your_admin_token_here
+```
+
+#### 站点配置
+
 编辑 `src/config/site.ts` 文件，修改以下配置：
 
 ```typescript

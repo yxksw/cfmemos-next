@@ -1,17 +1,27 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { useTheme } from "@/components/ThemeProvider";
-import { Users, Sun, Moon, Monitor } from "lucide-react";
+import { Users, Sun, Moon, Monitor, PenSquare, User, LogOut } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { siteConfig } from "@/config/site";
+import { logoutUser } from "@/lib/api";
 
 interface HeaderProps {
   onFriendsClick?: () => void;
+  onLoginClick?: () => void;
+  isLoggedIn?: boolean;
+  onLogout?: () => void;
 }
 
 export default function Header({
   onFriendsClick,
+  onLoginClick,
+  isLoggedIn = false,
+  onLogout,
 }: HeaderProps) {
+  const router = useRouter();
   const [isScrolled, setIsScrolled] = useState(false);
   const { resolvedTheme, toggleTheme, theme } = useTheme();
   const isDark = resolvedTheme === "dark";
@@ -41,6 +51,21 @@ export default function Header({
   const getThemeTitle = () => {
     if (theme === "system") return "跟随系统";
     return isDark ? "深色模式" : "浅色模式";
+  };
+
+  // 跳转到写说说页面
+  const handlePostClick = () => {
+    router.push("/post");
+  };
+
+  // 处理登出
+  const handleLogout = async () => {
+    const token = localStorage.getItem("auth_token");
+    if (token) {
+      await logoutUser(token);
+    }
+    localStorage.removeItem("auth_token");
+    onLogout?.();
   };
 
   return (
@@ -83,9 +108,52 @@ export default function Header({
         </button>
       </div>
 
-      {/* 右侧图标 - 已清空 */}
+      {/* 右侧图标 */}
       <div className="flex items-center gap-5">
-        {/* 右侧按钮已移除 */}
+        {/* 写说说 - 仅登录且 TOKEN 匹配时显示 */}
+        {isLoggedIn && (
+          <button
+            onClick={handlePostClick}
+            className={cn(
+              "w-6 h-6 transition-all duration-300 hover:scale-110",
+              isScrolled
+                ? "text-gray-800 dark:text-gray-200"
+                : "text-white drop-shadow-[0_0_2px_rgba(0,0,0,0.6)]"
+            )}
+            title="写说说"
+          >
+            <PenSquare className="w-full h-full" strokeWidth={2} />
+          </button>
+        )}
+
+        {/* 登录/登出 */}
+        {isLoggedIn ? (
+          <button
+            onClick={handleLogout}
+            className={cn(
+              "w-6 h-6 transition-all duration-300 hover:scale-110",
+              isScrolled
+                ? "text-gray-800 dark:text-gray-200"
+                : "text-white drop-shadow-[0_0_2px_rgba(0,0,0,0.6)]"
+            )}
+            title="登出"
+          >
+            <LogOut className="w-full h-full" strokeWidth={2} />
+          </button>
+        ) : (
+          <button
+            onClick={onLoginClick}
+            className={cn(
+              "w-6 h-6 transition-all duration-300 hover:scale-110",
+              isScrolled
+                ? "text-gray-800 dark:text-gray-200"
+                : "text-white drop-shadow-[0_0_2px_rgba(0,0,0,0.6)]"
+            )}
+            title="登录"
+          >
+            <User className="w-full h-full" strokeWidth={2} />
+          </button>
+        )}
       </div>
     </header>
   );

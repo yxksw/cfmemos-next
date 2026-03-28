@@ -208,23 +208,26 @@ textarea:focus {
 
 /* Twikoo 评论系统样式适配 */
 .twikoo-comments {
-  margin-top: 1rem;
+  margin-top: 0;
 }
 
 .twikoo-comments .tk-comments {
-  margin-top: 0.5rem;
+  margin-top: 0;
 }
 
-.twikoo-comments .tk-input {
+/* 评论输入框样式 */
+.twikoo-comments .tk-input,
+.twikoo-comments .tk-textarea {
   background-color: transparent;
   transition: background-color 0.2s ease;
 }
 
+/* 深色模式适配 */
 .dark .twikoo-comments .tk-input,
 .dark .twikoo-comments .tk-textarea {
-  background-color: #3d3d3d !important;
+  background-color: #2d2d2d !important;
   color: #e0e0e0 !important;
-  border-color: #555 !important;
+  border-color: #404040 !important;
 }
 
 .dark .twikoo-comments .tk-content {
@@ -241,6 +244,20 @@ textarea:focus {
 
 .dark .twikoo-comments .tk-submit {
   background-color: #07c160 !important;
+}
+
+/* 评论区域背景 */
+.dark .twikoo-comments .tk-main {
+  background-color: transparent !important;
+}
+
+/* 评论框边距调整 */
+.twikoo-comments .tk-meta-input {
+  margin-bottom: 0.5rem;
+}
+
+.twikoo-comments .tk-row {
+  margin-top: 0.5rem;
 }
 
 /* 模态框背景模糊 */

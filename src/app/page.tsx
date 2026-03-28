@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { siteConfig } from "@/config/site";
-import { getMemos } from "@/lib/api";
+import { getMemos, loginUser, deleteMemo } from "@/lib/api";
 import type { Memo } from "@/types/memo";
 
 import Header from "@/components/Header";
@@ -13,9 +13,8 @@ import MusicPlayer from "@/components/MusicPlayer";
 import TwikooComments from "@/components/TwikooComments";
 
 import LoginModal from "@/components/modals/LoginModal";
-import UserInfoModal from "@/components/modals/UserInfoModal";
 import FriendsModal from "@/components/modals/FriendsModal";
-import SettingsModal from "@/components/modals/SettingsModal";
+import EditMemoModal from "@/components/modals/EditMemoModal";
 
 import Pagination from "@/components/Pagination";
 import Live2DWidget from "@/components/Live2DWidget";
@@ -31,9 +30,9 @@ export default function Home() {
 
   // 模态框状态
   const [showLoginModal, setShowLoginModal] = useState(false);
-  const [showUserModal, setShowUserModal] = useState(false);
   const [showFriendsModal, setShowFriendsModal] = useState(false);
-  const [showSettingsModal, setShowSettingsModal] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [editingMemo, setEditingMemo] = useState<Memo | null>(null);
 
   // 评论展开状态
   const [expandedComments, setExpandedComments] = useState<number | null>(null);
@@ -100,10 +99,10 @@ export default function Home() {
   // 处理登录
   const handleLogin = async (username: string, password: string): Promise<boolean> => {
     try {
-      if (username === "admin" && password === "admin") {
-        const mockToken = "mock_token_" + Date.now();
-        localStorage.setItem("auth_token", mockToken);
-        setAuthToken(mockToken);
+      const result = await loginUser(username, password);
+      if (result && result.token) {
+        localStorage.setItem("auth_token", result.token);
+        setAuthToken(result.token);
         setIsLoggedIn(true);
         return true;
       }
@@ -118,6 +117,38 @@ export default function Home() {
     localStorage.removeItem("auth_token");
     setAuthToken("");
     setIsLoggedIn(false);
+  };
+
+  // 处理编辑说说
+  const handleEditClick = (memo: Memo) => {
+    setEditingMemo(memo);
+    setShowEditModal(true);
+  };
+
+  // 处理删除说说
+  const handleDeleteClick = async (memoId: number) => {
+    if (!confirm("确定要删除这条说说吗？")) return;
+    
+    const token = localStorage.getItem("auth_token");
+    if (!token) {
+      alert("请先登录");
+      return;
+    }
+
+    const success = await deleteMemo(memoId, token);
+    if (success) {
+      alert("删除成功！");
+      loadMemos(); // 刷新列表
+    } else {
+      alert("删除失败，请重试");
+    }
+  };
+
+  // 编辑成功后的回调
+  const handleEditSuccess = () => {
+    setShowEditModal(false);
+    setEditingMemo(null);
+    loadMemos(); // 刷新列表
   };
 
   // 切换评论展开
@@ -138,6 +169,9 @@ export default function Home() {
       {/* 顶部导航 */}
       <Header
         onFriendsClick={() => setShowFriendsModal(true)}
+        onLoginClick={() => setShowLoginModal(true)}
+        isLoggedIn={isLoggedIn}
+        onLogout={handleLogout}
       />
 
       {/* 主内容区 */}
@@ -163,10 +197,15 @@ export default function Home() {
                 <MemoCard
                   memo={memo}
                   onCommentClick={() => toggleComments(memo.id)}
+                  onEditClick={handleEditClick}
+                  onDeleteClick={handleDeleteClick}
+                  isLoggedIn={isLoggedIn}
                 />
                 {expandedComments === memo.id && (
-                  <div className="bg-gray-50 dark:bg-[#2d2d2d] px-4 pb-4 ml-10 border-b border-gray-100 dark:border-gray-700 transition-colors duration-300">
-                    <TwikooComments memoId={memo.id} />
+                  <div className="bg-gray-50 dark:bg-[#2d2d2d] px-4 py-4 ml-10 border-b border-gray-100 dark:border-gray-700 transition-colors duration-300">
+                    <div className="bg-white dark:bg-[#1a1a1a] rounded-lg p-4 shadow-sm">
+                      <TwikooComments memoId={memo.id} />
+                    </div>
                   </div>
                 )}
               </div>
@@ -209,22 +248,20 @@ export default function Home() {
         onLogin={handleLogin}
       />
 
-      <UserInfoModal
-        isOpen={showUserModal}
-        onClose={() => setShowUserModal(false)}
-        onLogout={handleLogout}
-      />
-
       <FriendsModal
         isOpen={showFriendsModal}
         onClose={() => setShowFriendsModal(false)}
       />
 
-      <SettingsModal
-        isOpen={showSettingsModal}
-        onClose={() => setShowSettingsModal(false)}
-        isLoggedIn={isLoggedIn}
-        onLogout={handleLogout}
+      {/* 编辑说说模态框 */}
+      <EditMemoModal
+        isOpen={showEditModal}
+        onClose={() => {
+          setShowEditModal(false);
+          setEditingMemo(null);
+        }}
+        memo={editingMemo}
+        onSuccess={handleEditSuccess}
       />
     </div>
   );

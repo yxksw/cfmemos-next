@@ -3,16 +3,25 @@
 import { useState } from "react";
 import type { Memo } from "@/types/memo";
 import { formatDateTime, getImageGridClass } from "@/lib/utils";
-import { MoreHorizontal, MapPin, Music } from "lucide-react";
+import { MoreHorizontal, MapPin, Music, Edit3, Trash2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { siteConfig } from "@/config/site";
 
 interface MemoCardProps {
   memo: Memo;
   onCommentClick?: (memoId: number) => void;
+  onEditClick?: (memo: Memo) => void;
+  onDeleteClick?: (memoId: number) => void;
+  isLoggedIn?: boolean;
 }
 
-export default function MemoCard({ memo, onCommentClick }: MemoCardProps) {
+export default function MemoCard({ 
+  memo, 
+  onCommentClick, 
+  onEditClick, 
+  onDeleteClick,
+  isLoggedIn = false 
+}: MemoCardProps) {
   const [lightboxImage, setLightboxImage] = useState<string | null>(null);
   
   const images = memo.resourceList
@@ -49,20 +58,42 @@ export default function MemoCard({ memo, onCommentClick }: MemoCardProps) {
     <>
       <article className="bg-white dark:bg-[#2d2d2d] p-4 mb-0 shadow-sm dark:shadow-[0_1px_4px_rgba(0,0,0,0.3)] border-b border-gray-100 dark:border-gray-700">
         {/* 头部 */}
-        <div className="flex items-center mb-2.5">
-          <img
-            src={siteConfig.author.avatar}
-            alt={memo.creatorName}
-            className="w-8 h-8 rounded-sm mr-2.5"
-          />
-          <div>
-            <div className="font-bold text-base text-gray-900 dark:text-gray-100">
-              {memo.creatorName}
-            </div>
-            <div className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
-              {formatDateTime(memo.createdTs)}
+        <div className="flex items-center justify-between mb-2.5">
+          <div className="flex items-center">
+            <img
+              src={siteConfig.author.avatar}
+              alt={memo.creatorName}
+              className="w-8 h-8 rounded-sm mr-2.5"
+            />
+            <div>
+              <div className="font-bold text-base text-gray-900 dark:text-gray-100">
+                {memo.creatorName}
+              </div>
+              <div className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                {formatDateTime(memo.createdTs)}
+              </div>
             </div>
           </div>
+          
+          {/* 编辑和删除按钮 - 仅登录时显示 */}
+          {isLoggedIn && (
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => onEditClick?.(memo)}
+                className="p-1.5 text-gray-400 hover:text-[#07c160] transition-colors"
+                title="编辑"
+              >
+                <Edit3 className="w-4 h-4" />
+              </button>
+              <button
+                onClick={() => onDeleteClick?.(memo.id)}
+                className="p-1.5 text-gray-400 hover:text-red-500 transition-colors"
+                title="删除"
+              >
+                <Trash2 className="w-4 h-4" />
+              </button>
+            </div>
+          )}
         </div>
 
         {/* 内容 */}

@@ -34,7 +34,7 @@ export default function TwikooComments({ memoId }: TwikooCommentsProps) {
       if (!window.twikoo) {
         // 动态加载 Twikoo 脚本
         const script = document.createElement("script");
-        script.src = "https://cdn.jsdelivr.net/npm/twikoo@1.6.39/dist/twikoo.all.min.js";
+        script.src = "https://cdn.jsdelivr.net/npm/twikoo@1.6.44/dist/twikoo.all.min.js";
         script.async = true;
         script.crossOrigin = "anonymous";
         
@@ -77,10 +77,12 @@ export default function TwikooComments({ memoId }: TwikooCommentsProps) {
   }
 
   return (
-    <div
-      id={`twikoo-container-${memoId}`}
-      ref={containerRef}
-      className="twikoo-comments"
-    />
+    <div className="w-full overflow-hidden">
+      <div
+        id={`twikoo-container-${memoId}`}
+        ref={containerRef}
+        className="twikoo-comments"
+      />
+    </div>
   );
 }

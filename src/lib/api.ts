@@ -201,3 +201,67 @@ export async function uploadResource(
     return null;
   }
 }
+
+// 用户登录
+export async function loginUser(
+  username: string,
+  password: string
+): Promise<{ token: string; user: { id: number; username: string; name: string } } | null> {
+  const response = await fetchApi<{
+    token: string;
+    user: { id: number; username: string; name: string };
+  }>("/user/login", {
+    method: "POST",
+    body: JSON.stringify({ username, password }),
+  });
+
+  if (response.error) {
+    console.error("登录失败:", response.error);
+    return null;
+  }
+
+  return response.data || null;
+}
+
+// 用户登出
+export async function logoutUser(token: string): Promise<boolean> {
+  const response = await fetchApi<void>("/user/logout", {
+    method: "POST",
+    headers: {
+      "Authorization": `Bearer ${token}`,
+    },
+  });
+
+  if (response.error) {
+    console.error("登出失败:", response.error);
+    return false;
+  }
+
+  return true;
+}
+
+// 获取当前登录用户信息
+export async function getCurrentUser(token: string): Promise<{
+  id: number;
+  username: string;
+  name: string;
+  email?: string;
+} | null> {
+  const response = await fetchApi<{
+    id: number;
+    username: string;
+    name: string;
+    email?: string;
+  }>("/user/me", {
+    headers: {
+      "Authorization": `Bearer ${token}`,
+    },
+  });
+
+  if (response.error) {
+    console.error("获取用户信息失败:", response.error);
+    return null;
+  }
+
+  return response.data || null;
+}
