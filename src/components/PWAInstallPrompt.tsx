@@ -15,10 +15,6 @@ interface NavigatorWithStandalone extends Navigator {
 }
 
 export default function PWAInstallPrompt() {
-  // 如果 PWA 被禁用，不渲染组件
-  if (!siteConfig.pwa.enabled) {
-    return null;
-  }
   const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null);
   const [isVisible, setIsVisible] = useState(false);
   const [isInstalled, setIsInstalled] = useState(false);
@@ -48,42 +44,44 @@ export default function PWAInstallPrompt() {
   }, []);
 
   useEffect(() => {
-    // 检测是否为 iOS 设备
-    const checkIOS = () => {
+    // 如果 PWA 被禁用，不执行任何操作
+    if (!siteConfig.pwa.enabled) {
+      return;
+    }
+
+    // 使用 setTimeout 将状态更新推迟到渲染完成后
+    const timer = setTimeout(() => {
+      // 检测是否为 iOS 设备
       const isIOSDevice = /iPad|iPhone|iPod/.test(navigator.userAgent) && 
                          !("MSStream" in window);
       setIsIOS(isIOSDevice);
-      return isIOSDevice;
-    };
 
-    // 检测是否已安装（standalone 模式）
-    const checkStandalone = () => {
+      // 检测是否已安装（standalone 模式）
       const nav = navigator as NavigatorWithStandalone;
       const isStandalone = window.matchMedia("(display-mode: standalone)").matches ||
                           nav.standalone === true;
       
       if (isStandalone) {
         setIsInstalled(true);
-        return true;
-      }
-      return false;
-    };
-
-    const isIOSDevice = checkIOS();
-    const isStandalone = checkStandalone();
-
-    if (isStandalone) {
-      return;
-    }
-
-    // 检查用户是否已关闭提示（24小时内不再显示）
-    const lastDismissed = localStorage.getItem("pwa_prompt_dismissed");
-    if (lastDismissed) {
-      const hoursSinceDismissed = (Date.now() - parseInt(lastDismissed)) / (1000 * 60 * 60);
-      if (hoursSinceDismissed < 24) {
         return;
       }
-    }
+
+      // 检查用户是否已关闭提示（24小时内不再显示）
+      const lastDismissed = localStorage.getItem("pwa_prompt_dismissed");
+      if (lastDismissed) {
+        const hoursSinceDismissed = (Date.now() - parseInt(lastDismissed)) / (1000 * 60 * 60);
+        if (hoursSinceDismissed < 24) {
+          return;
+        }
+      }
+
+      // 对于 iOS，延迟显示提示
+      if (isIOSDevice) {
+        setTimeout(() => {
+          setIsVisible(true);
+        }, 3000);
+      }
+    }, 0);
 
     // 监听 beforeinstallprompt 事件
     const handleBeforeInstallPrompt = (e: Event) => {
@@ -103,25 +101,15 @@ export default function PWAInstallPrompt() {
     window.addEventListener("beforeinstallprompt", handleBeforeInstallPrompt);
     window.addEventListener("appinstalled", handleAppInstalled);
 
-    // 对于 iOS，如果没有安装，延迟显示提示
-    let iosTimeout: NodeJS.Timeout;
-    if (isIOSDevice && !isStandalone) {
-      iosTimeout = setTimeout(() => {
-        setIsVisible(true);
-      }, 3000);
-    }
-
     return () => {
+      clearTimeout(timer);
       window.removeEventListener("beforeinstallprompt", handleBeforeInstallPrompt);
       window.removeEventListener("appinstalled", handleAppInstalled);
-      if (iosTimeout) {
-        clearTimeout(iosTimeout);
-      }
     };
   }, []);
 
-  // 如果已安装或不显示，返回 null
-  if (isInstalled || !isVisible) return null;
+  // 如果 PWA 被禁用、已安装或不显示，返回 null
+  if (!siteConfig.pwa.enabled || isInstalled || !isVisible) return null;
 
   return (
     <div className="fixed bottom-4 left-4 right-4 sm:left-auto sm:right-4 sm:w-80 z-[9999]">

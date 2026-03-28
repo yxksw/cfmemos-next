@@ -5,128 +5,236 @@ import { Heart } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { siteConfig } from "@/config/site";
 
-// 简单的提示函数
-function showToast(message: string) {
-  // 创建提示元素
-  const toast = document.createElement("div");
-  toast.className =
-    "fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 " +
-    "bg-black/70 text-white px-4 py-2 rounded-lg text-sm z-[9999] " +
-    "animate-fade-in-out pointer-events-none";
-  toast.textContent = message;
-  document.body.appendChild(toast);
+// 本地存储点赞数据（当 API 不可用时使用）
+const STORAGE_KEY = 'cfmemos-likes';
 
-  // 2秒后移除
-  setTimeout(() => {
-    toast.remove();
-  }, 2000);
+interface LikeRecord {
+  memoId: number;
+  userFingerprint: string;
+  createdAt: string;
+}
+
+// 获取用户指纹
+function getUserFingerprint(): string {
+  if (typeof navigator === 'undefined') return 'unknown';
+  const userAgent = navigator.userAgent || '';
+  let hash = 0;
+  for (let i = 0; i < userAgent.length; i++) {
+    const char = userAgent.charCodeAt(i);
+    hash = ((hash << 5) - hash) + char;
+    hash = hash & hash;
+  }
+  return Math.abs(hash).toString(16);
+}
+
+// 从本地存储获取点赞数据
+function getLocalLikeData(memoId: number): { count: number; hasLiked: boolean } {
+  if (typeof window === 'undefined') return { count: 0, hasLiked: false };
+  try {
+    const data = localStorage.getItem(STORAGE_KEY);
+    const likes: LikeRecord[] = data ? JSON.parse(data) : [];
+    const userFingerprint = getUserFingerprint();
+    const count = likes.filter(like => like.memoId === memoId).length;
+    const hasLiked = likes.some(like => like.memoId === memoId && like.userFingerprint === userFingerprint);
+    return { count, hasLiked };
+  } catch {
+    return { count: 0, hasLiked: false };
+  }
+}
+
+// 保存点赞到本地存储
+function saveLocalLike(memoId: number): { count: number; hasLiked: boolean } {
+  if (typeof window === 'undefined') return { count: 0, hasLiked: false };
+  try {
+    const data = localStorage.getItem(STORAGE_KEY);
+    const likes: LikeRecord[] = data ? JSON.parse(data) : [];
+    const userFingerprint = getUserFingerprint();
+    
+    // 检查是否已点赞
+    const hasLiked = likes.some(like => like.memoId === memoId && like.userFingerprint === userFingerprint);
+    if (hasLiked) {
+      const count = likes.filter(like => like.memoId === memoId).length;
+      return { count, hasLiked: true };
+    }
+    
+    // 添加点赞
+    likes.push({
+      memoId,
+      userFingerprint,
+      createdAt: new Date().toISOString(),
+    });
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(likes));
+    
+    const count = likes.filter(like => like.memoId === memoId).length;
+    return { count, hasLiked: true };
+  } catch {
+    return { count: 0, hasLiked: false };
+  }
+}
+
+// 取消本地存储的点赞
+function removeLocalLike(memoId: number): { count: number; hasLiked: boolean } {
+  if (typeof window === 'undefined') return { count: 0, hasLiked: false };
+  try {
+    const data = localStorage.getItem(STORAGE_KEY);
+    let likes: LikeRecord[] = data ? JSON.parse(data) : [];
+    const userFingerprint = getUserFingerprint();
+    
+    // 移除点赞
+    likes = likes.filter(like => !(like.memoId === memoId && like.userFingerprint === userFingerprint));
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(likes));
+    
+    const count = likes.filter(like => like.memoId === memoId).length;
+    return { count, hasLiked: false };
+  } catch {
+    return { count: 0, hasLiked: false };
+  }
+}
+
+// 获取所有本地点赞数据
+function getAllLocalLikes(): LikeRecord[] {
+  if (typeof window === 'undefined') return [];
+  try {
+    const data = localStorage.getItem(STORAGE_KEY);
+    return data ? JSON.parse(data) : [];
+  } catch {
+    return [];
+  }
+}
+
+// 发送 API 请求（带超时）
+async function sendLikeRequest(memoId: number, action: 'like' | 'unlike'): Promise<{ count: number; hasLiked: boolean } | null> {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 5000); // 5秒超时
+
+  try {
+    const response = await fetch("/api/likes", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ memoId, action }),
+      signal: controller.signal,
+    });
+
+    clearTimeout(timeoutId);
+
+    if (response.ok) {
+      const serverData = await response.json();
+      const allLocalLikes = getAllLocalLikes();
+      const localCount = allLocalLikes.filter(like => like.memoId === memoId).length;
+      return {
+        count: Math.max(serverData.count, localCount),
+        hasLiked: action === 'like',
+      };
+    }
+    return null;
+  } catch (error) {
+    clearTimeout(timeoutId);
+    return null;
+  }
 }
 
 interface LikeButtonProps {
   memoId: number;
   className?: string;
+  onLikeDataChange?: (data: LikeData) => void;
+  showCount?: boolean;
 }
 
-interface LikeData {
+export interface LikeData {
   count: number;
   hasLiked: boolean;
 }
 
-export default function LikeButton({ memoId, className }: LikeButtonProps) {
+export default function LikeButton({ memoId, className, onLikeDataChange, showCount = true }: LikeButtonProps) {
   const [likeData, setLikeData] = useState<LikeData>({ count: 0, hasLiked: false });
-  const [isLoading, setIsLoading] = useState(false);
   const [isAnimating, setIsAnimating] = useState(false);
-  const pendingRequest = useRef<Promise<void> | null>(null);
 
-  // 获取点赞数据
+  // 获取点赞数据 - 优先使用本地存储
   const fetchLikeData = useCallback(async () => {
+    // 首先获取本地存储的数据
+    const localData = getLocalLikeData(memoId);
+    
+    // 如果本地有数据，先显示本地数据
+    if (localData.count > 0 || localData.hasLiked) {
+      setLikeData(localData);
+    }
+    
+    // 然后尝试从 API 获取数据（用于同步其他用户的点赞）
     try {
-      const response = await fetch(`/api/likes?memoId=${memoId}`);
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 5000); // 5秒超时
+      
+      const response = await fetch(`/api/likes?memoId=${memoId}`, {
+        cache: 'no-store',
+        signal: controller.signal,
+      });
+
+      clearTimeout(timeoutId);
+      
       if (response.ok) {
-        const data = await response.json();
-        setLikeData(data);
+        const serverData = await response.json();
+        // 合并服务器数据和本地数据
+        // 如果用户已点赞（本地存储为准），使用本地状态
+        // 点赞数取服务器和本地的最大值
+        const allLocalLikes = getAllLocalLikes();
+        const localCount = allLocalLikes.filter(like => like.memoId === memoId).length;
+        const mergedData = {
+          count: Math.max(serverData.count, localCount),
+          hasLiked: localData.hasLiked || serverData.hasLiked,
+        };
+        setLikeData(mergedData);
       }
     } catch (error) {
-      console.error("[LikeButton] Failed to fetch like data:", error);
+      // API 失败时，已经设置了本地数据
     }
   }, [memoId]);
 
-  // 初始加载
+  // 初始加载 - 使用 startTransition 避免阻塞渲染
   useEffect(() => {
     if (siteConfig.likes.enabled) {
-      fetchLikeData();
+      // 使用 setTimeout 将数据获取推迟到渲染完成后
+      const timer = setTimeout(() => {
+        fetchLikeData();
+      }, 0);
+      return () => clearTimeout(timer);
     }
   }, [fetchLikeData]);
 
+  // 当点赞数据变化时通知父组件
+  useEffect(() => {
+    onLikeDataChange?.(likeData);
+  }, [likeData, onLikeDataChange]);
+
   // 处理点赞/取消点赞
   const handleLike = async () => {
-    // 如果有正在进行的请求，等待它完成
-    if (pendingRequest.current) {
-      return;
-    }
-
     const isUnlike = likeData.hasLiked;
 
-    // 创建请求 Promise
-    const requestPromise = (async () => {
-      setIsLoading(true);
-      setIsAnimating(true);
+    // 先更新本地存储
+    let localData;
+    if (isUnlike) {
+      localData = removeLocalLike(memoId);
+    } else {
+      localData = saveLocalLike(memoId);
+    }
+    
+    // 乐观更新：立即更新 UI（不阻塞用户交互）
+    setLikeData(localData);
+    setIsAnimating(true);
+    
+    // 动画持续 300ms
+    setTimeout(() => setIsAnimating(false), 300);
 
-      // 乐观更新：先更新 UI
-      setLikeData((prev) => ({
-        count: isUnlike ? prev.count - 1 : prev.count + 1,
-        hasLiked: !isUnlike,
-      }));
-
-      try {
-        const action = isUnlike ? "unlike" : "like";
-        const response = await fetch("/api/likes", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({ memoId, action }),
-        });
-
-        if (!response.ok) {
-          // 如果请求失败，回滚 UI
-          setLikeData((prev) => ({
-            count: isUnlike ? prev.count + 1 : prev.count - 1,
-            hasLiked: isUnlike,
-          }));
-
-          if (response.status === 409) {
-            // 409 只在点赞时出现，表示已经点赞过了
-            if (!isUnlike) {
-              setLikeData((prev) => ({ ...prev, hasLiked: true }));
-              showToast("已点赞，请勿重复点赞");
-            }
-          }
-        } else {
-          // 请求成功，获取最新的数据
-          const data = await response.json();
-          setLikeData({
-            count: data.count,
-            hasLiked: data.hasLiked,
-          });
-        }
-      } catch (error) {
-        console.error("[LikeButton] Failed to update like:", error);
-        // 请求失败，回滚 UI
-        setLikeData((prev) => ({
-          count: isUnlike ? prev.count + 1 : prev.count - 1,
-          hasLiked: isUnlike,
-        }));
-      } finally {
-        setIsLoading(false);
-        pendingRequest.current = null;
-        // 动画持续 300ms
-        setTimeout(() => setIsAnimating(false), 300);
+    // 后台发送 API 请求（不阻塞用户交互）
+    const action = isUnlike ? "unlike" : "like";
+    sendLikeRequest(memoId, action).then((serverData) => {
+      if (serverData) {
+        // 如果服务器返回成功，更新 UI
+        setLikeData(serverData);
       }
-    })();
-
-    pendingRequest.current = requestPromise;
-    await requestPromise;
+      // 如果失败，本地存储已经是最新的，不需要额外处理
+    });
   };
 
   // 如果点赞功能被禁用，不渲染
@@ -137,13 +245,11 @@ export default function LikeButton({ memoId, className }: LikeButtonProps) {
   return (
     <button
       onClick={handleLike}
-      disabled={isLoading}
       className={cn(
         "flex items-center gap-1.5 transition-all duration-200",
         likeData.hasLiked
           ? "text-pink-500 hover:text-pink-400"
           : "text-inherit hover:opacity-80",
-        isLoading && "opacity-50 cursor-not-allowed",
         className
       )}
       title={likeData.hasLiked ? "取消点赞" : "点赞"}
@@ -157,9 +263,11 @@ export default function LikeButton({ memoId, className }: LikeButtonProps) {
           isAnimating && (likeData.hasLiked ? "scale-125" : "scale-90")
         )}
       />
-      <span className="text-sm font-medium min-w-[1.5rem] text-center">
-        {likeData.count}
-      </span>
+      {showCount && (
+        <span className="text-sm font-medium min-w-[1.5rem] text-center">
+          {likeData.count}
+        </span>
+      )}
     </button>
   );
 }

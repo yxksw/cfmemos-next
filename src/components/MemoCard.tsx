@@ -6,7 +6,7 @@ import { formatDateTime, getImageGridClass } from "@/lib/utils";
 import { MoreHorizontal, MapPin, Music, Edit3, Trash2, Heart, MessageCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { siteConfig } from "@/config/site";
-import LikeButton from "./LikeButton";
+import LikeButton, { LikeData } from "./LikeButton";
 
 interface MemoCardProps {
   memo: Memo;
@@ -26,6 +26,7 @@ export default function MemoCard({
   const [lightboxImage, setLightboxImage] = useState<string | null>(null);
   const [showActionMenu, setShowActionMenu] = useState(false);
   const [menuPosition, setMenuPosition] = useState({ top: 0, right: 0 });
+  const [likeData, setLikeData] = useState<LikeData>({ count: 0, hasLiked: false });
   const menuRef = useRef<HTMLDivElement>(null);
   const buttonRef = useRef<HTMLButtonElement>(null);
   
@@ -187,6 +188,21 @@ export default function MemoCard({
 
         {/* 底部信息栏 */}
         <div className="flex justify-end items-center py-2 text-xs text-gray-500 dark:text-gray-400 ml-10">
+          {/* 点赞数显示 - 在三个点左边 */}
+          {siteConfig.likes.enabled && (
+            <div className="flex items-center gap-1 mr-3">
+              <LikeButton
+                memoId={memo.id}
+                className={cn(
+                  "text-gray-500 dark:text-gray-400 hover:text-pink-500 dark:hover:text-pink-400",
+                  likeData.hasLiked && "text-pink-500 dark:text-pink-500"
+                )}
+                onLikeDataChange={setLikeData}
+                showCount={true}
+              />
+            </div>
+          )}
+
           {/* 三个点按钮 */}
           <div className="relative" ref={menuRef}>
             <button
@@ -220,6 +236,8 @@ export default function MemoCard({
                     <LikeButton
                       memoId={memo.id}
                       className="text-white hover:bg-white/10 px-4 py-2"
+                      onLikeDataChange={setLikeData}
+                      showCount={false}
                     />
                   </div>
                 )}
