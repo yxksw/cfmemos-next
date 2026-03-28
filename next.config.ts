@@ -8,9 +8,8 @@ const nextConfig: NextConfig = {
     unoptimized: true,
   },
 
-  // 输出配置 - 仅在生产构建时使用静态导出
-  output: "export",
-  distDir: "dist",
+  // SSR 模式 - 不使用静态导出
+  // output: "export", // 注释掉静态导出
 
   // 尾部斜杠配置
   trailingSlash: true,
@@ -19,9 +18,6 @@ const nextConfig: NextConfig = {
   devIndicators: {
     appIsrStatus: false,
   },
-
-  // 禁用 Turbopack
-  turbopack: false,
 };
 
 export default nextConfig;

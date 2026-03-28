@@ -1,23 +1,15 @@
 [build]
   command = "npm install && npm run build"
-  publish = "dist"
+  publish = ".next"
 
 [build.environment]
   NODE_VERSION = "20"
   NPM_FLAGS = "--legacy-peer-deps"
   NEXT_TELEMETRY_DISABLED = "1"
-  NEXT_PRIVATE_SKIP_VALIDATION = "1"
 
-[[redirects]]
-  from = "/*"
-  to = "/index.html"
-  status = 200
+# Next.js SSR 需要插件
+[[plugins]]
+  package = "@netlify/plugin-nextjs"
 
-[context.production.environment]
-  NODE_ENV = "production"
-
-[context.deploy-preview.environment]
-  NODE_ENV = "production"
-
-[context.branch-deploy.environment]
-  NODE_ENV = "production"
+# SSR 重定向规则 - 由插件自动处理
+# 不需要手动配置 /* 到 index.html 的重定向

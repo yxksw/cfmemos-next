@@ -13,7 +13,7 @@
 - 🤖 Live2D 看板娘
 - 🖱️ 自定义鼠标样式
 - 📡 RSS 订阅
-- ⚡ 支持 Vercel / Netlify / EdgeOne 部署
+- ⚡ 支持 SSR / SSG 部署（Vercel / Netlify / EdgeOne / Cloudflare Pages）
 
 ## 技术栈
 
@@ -110,26 +110,53 @@ npm run build
 
 ### 前端部署
 
-#### Vercel 部署
+#### SSR 部署（推荐）
 
+本项目支持 SSR（服务端渲染）部署，提供更好的性能和 SEO：
+
+**Vercel SSR 部署**：
 1. 将代码推送到 GitHub
 2. 在 Vercel 导入项目
-3. 配置环境变量（如需要）
-4. 自动部署
+3. 无需额外配置，自动识别 Next.js 项目
+4. 自动部署（默认使用 SSR 模式）
 
-#### Netlify 部署
-
+**Netlify SSR 部署**：
 1. 将代码推送到 GitHub
 2. 在 Netlify 选择 "Add new site" → "Import an existing project"
 3. 选择 GitHub 仓库
 4. 构建设置（已配置在 `netlify.toml` 中）：
-   - 构建命令: `npm run build`
-   - 发布目录: `dist`
-5. 点击 "Deploy site"
+   - 构建命令: `npm install && npm run build`
+   - 发布目录: `.next`
+5. 确保已安装 `@netlify/plugin-nextjs` 插件
+6. 点击 "Deploy site"
 
-**手动配置（可选）**：
-- 环境变量：在 Site settings → Environment variables 中添加 `NODE_ENV=production`
-- 自定义域名：在 Domain settings 中配置
+**其他支持 SSR 的平台**：
+- Railway
+- Render
+- DigitalOcean App Platform
+- AWS Amplify
+
+#### 静态导出部署
+
+如果需要静态导出（SSG），修改 `next.config.ts`：
+
+```typescript
+const nextConfig = {
+  output: "export",
+  distDir: "dist",
+  // ...其他配置
+};
+```
+
+然后使用以下平台部署：
+
+**Cloudflare Pages**：
+1. 构建命令: `npm run build`
+2. 构建输出目录: `dist`
+
+**GitHub Pages**：
+1. 使用 GitHub Actions 工作流
+2. 构建并推送到 `gh-pages` 分支
 
 #### EdgeOne Pages 部署
 
@@ -137,7 +164,7 @@ npm run build
 2. 在 EdgeOne Pages 创建项目
 3. 构建设置：
    - 构建命令: `npm run build`
-   - 输出目录: `dist`
+   - 输出目录: `.next`（SSR）或 `dist`（静态）
 4. 部署
 
 ## 项目结构
