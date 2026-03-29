@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback, memo } from "react";
 import { Heart } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { siteConfig } from "@/config/site";
@@ -12,6 +12,11 @@ interface LikeRecord {
   memoId: number;
   userFingerprint: string;
   createdAt: string;
+  userName?: string; // 用户名（如果有）
+}
+
+interface LikeUser {
+  author: string;
 }
 
 // 获取用户指纹
@@ -28,23 +33,28 @@ function getUserFingerprint(): string {
 }
 
 // 从本地存储获取点赞数据
-function getLocalLikeData(memoId: number): { count: number; hasLiked: boolean } {
-  if (typeof window === 'undefined') return { count: 0, hasLiked: false };
+function getLocalLikeData(memoId: number): { count: number; hasLiked: boolean; likeUsers: LikeUser[] } {
+  if (typeof window === 'undefined') return { count: 0, hasLiked: false, likeUsers: [] };
   try {
     const data = localStorage.getItem(STORAGE_KEY);
     const likes: LikeRecord[] = data ? JSON.parse(data) : [];
     const userFingerprint = getUserFingerprint();
-    const count = likes.filter(like => like.memoId === memoId).length;
-    const hasLiked = likes.some(like => like.memoId === memoId && like.userFingerprint === userFingerprint);
-    return { count, hasLiked };
+    const memoLikes = likes.filter(like => like.memoId === memoId);
+    const count = memoLikes.length;
+    const hasLiked = memoLikes.some(like => like.userFingerprint === userFingerprint);
+    const likeUsers = memoLikes
+      .filter(like => like.userName)
+      .map(like => ({ author: like.userName || '匿名用户' }))
+      .slice(0, 3); // 只取前3个用户
+    return { count, hasLiked, likeUsers };
   } catch {
-    return { count: 0, hasLiked: false };
+    return { count: 0, hasLiked: false, likeUsers: [] };
   }
 }
 
 // 保存点赞到本地存储
-function saveLocalLike(memoId: number): { count: number; hasLiked: boolean } {
-  if (typeof window === 'undefined') return { count: 0, hasLiked: false };
+function saveLocalLike(memoId: number): { count: number; hasLiked: boolean; likeUsers: LikeUser[] } {
+  if (typeof window === 'undefined') return { count: 0, hasLiked: false, likeUsers: [] };
   try {
     const data = localStorage.getItem(STORAGE_KEY);
     const likes: LikeRecord[] = data ? JSON.parse(data) : [];
@@ -53,8 +63,13 @@ function saveLocalLike(memoId: number): { count: number; hasLiked: boolean } {
     // 检查是否已点赞
     const hasLiked = likes.some(like => like.memoId === memoId && like.userFingerprint === userFingerprint);
     if (hasLiked) {
-      const count = likes.filter(like => like.memoId === memoId).length;
-      return { count, hasLiked: true };
+      const memoLikes = likes.filter(like => like.memoId === memoId);
+      const count = memoLikes.length;
+      const likeUsers = memoLikes
+        .filter(like => like.userName)
+        .map(like => ({ author: like.userName || '匿名用户' }))
+        .slice(0, 3);
+      return { count, hasLiked: true, likeUsers };
     }
     
     // 添加点赞
@@ -62,19 +77,25 @@ function saveLocalLike(memoId: number): { count: number; hasLiked: boolean } {
       memoId,
       userFingerprint,
       createdAt: new Date().toISOString(),
+      userName: '我', // 默认为"我"
     });
     localStorage.setItem(STORAGE_KEY, JSON.stringify(likes));
     
-    const count = likes.filter(like => like.memoId === memoId).length;
-    return { count, hasLiked: true };
+    const memoLikes = likes.filter(like => like.memoId === memoId);
+    const count = memoLikes.length;
+    const likeUsers = memoLikes
+      .filter(like => like.userName)
+      .map(like => ({ author: like.userName || '匿名用户' }))
+      .slice(0, 3);
+    return { count, hasLiked: true, likeUsers };
   } catch {
-    return { count: 0, hasLiked: false };
+    return { count: 0, hasLiked: false, likeUsers: [] };
   }
 }
 
 // 取消本地存储的点赞
-function removeLocalLike(memoId: number): { count: number; hasLiked: boolean } {
-  if (typeof window === 'undefined') return { count: 0, hasLiked: false };
+function removeLocalLike(memoId: number): { count: number; hasLiked: boolean; likeUsers: LikeUser[] } {
+  if (typeof window === 'undefined') return { count: 0, hasLiked: false, likeUsers: [] };
   try {
     const data = localStorage.getItem(STORAGE_KEY);
     let likes: LikeRecord[] = data ? JSON.parse(data) : [];
@@ -84,10 +105,15 @@ function removeLocalLike(memoId: number): { count: number; hasLiked: boolean } {
     likes = likes.filter(like => !(like.memoId === memoId && like.userFingerprint === userFingerprint));
     localStorage.setItem(STORAGE_KEY, JSON.stringify(likes));
     
-    const count = likes.filter(like => like.memoId === memoId).length;
-    return { count, hasLiked: false };
+    const memoLikes = likes.filter(like => like.memoId === memoId);
+    const count = memoLikes.length;
+    const likeUsers = memoLikes
+      .filter(like => like.userName)
+      .map(like => ({ author: like.userName || '匿名用户' }))
+      .slice(0, 3);
+    return { count, hasLiked: false, likeUsers };
   } catch {
-    return { count: 0, hasLiked: false };
+    return { count: 0, hasLiked: false, likeUsers: [] };
   }
 }
 
@@ -103,7 +129,7 @@ function getAllLocalLikes(): LikeRecord[] {
 }
 
 // 发送 API 请求（带超时）
-async function sendLikeRequest(memoId: number, action: 'like' | 'unlike'): Promise<{ count: number; hasLiked: boolean } | null> {
+async function sendLikeRequest(memoId: number, action: 'like' | 'unlike'): Promise<{ count: number; hasLiked: boolean; likeUsers: LikeUser[] } | null> {
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), 5000); // 5秒超时
 
@@ -122,10 +148,16 @@ async function sendLikeRequest(memoId: number, action: 'like' | 'unlike'): Promi
     if (response.ok) {
       const serverData = await response.json();
       const allLocalLikes = getAllLocalLikes();
-      const localCount = allLocalLikes.filter(like => like.memoId === memoId).length;
+      const localLikes = allLocalLikes.filter(like => like.memoId === memoId);
+      const localCount = localLikes.length;
+      const likeUsers = localLikes
+        .filter(like => like.userName)
+        .map(like => ({ author: like.userName || '匿名用户' }))
+        .slice(0, 3);
       return {
-        count: Math.max(serverData.count, localCount),
+        count: Math.max(serverData.count || 0, localCount),
         hasLiked: action === 'like',
+        likeUsers,
       };
     }
     return null;
@@ -140,15 +172,17 @@ interface LikeButtonProps {
   className?: string;
   onLikeDataChange?: (data: LikeData) => void;
   showCount?: boolean;
+  showUsers?: boolean;
 }
 
 export interface LikeData {
   count: number;
   hasLiked: boolean;
+  likeUsers?: LikeUser[];
 }
 
-export default function LikeButton({ memoId, className, onLikeDataChange, showCount = true }: LikeButtonProps) {
-  const [likeData, setLikeData] = useState<LikeData>({ count: 0, hasLiked: false });
+function LikeButton({ memoId, className, onLikeDataChange, showCount = true, showUsers = false }: LikeButtonProps) {
+  const [likeData, setLikeData] = useState<LikeData>({ count: 0, hasLiked: false, likeUsers: [] });
   const [isAnimating, setIsAnimating] = useState(false);
 
   // 获取点赞数据 - 优先使用本地存储
@@ -179,10 +213,16 @@ export default function LikeButton({ memoId, className, onLikeDataChange, showCo
         // 如果用户已点赞（本地存储为准），使用本地状态
         // 点赞数取服务器和本地的最大值
         const allLocalLikes = getAllLocalLikes();
-        const localCount = allLocalLikes.filter(like => like.memoId === memoId).length;
+        const localLikes = allLocalLikes.filter(like => like.memoId === memoId);
+        const localCount = localLikes.length;
+        const likeUsers = localLikes
+          .filter(like => like.userName)
+          .map(like => ({ author: like.userName || '匿名用户' }))
+          .slice(0, 3);
         const mergedData = {
-          count: Math.max(serverData.count, localCount),
-          hasLiked: localData.hasLiked || serverData.hasLiked,
+          count: Math.max(serverData.count || 0, localCount),
+          hasLiked: localData.hasLiked || serverData.hasLiked || false,
+          likeUsers,
         };
         setLikeData(mergedData);
       }
@@ -237,18 +277,63 @@ export default function LikeButton({ memoId, className, onLikeDataChange, showCo
     });
   };
 
+  // 生成点赞文本
+  const generateLikesText = () => {
+    const { count, likeUsers } = likeData;
+    if (count === 0) {
+      return '0个点赞';
+    }
+
+    if (!likeUsers || likeUsers.length === 0) {
+      return `${count}个点赞`;
+    }
+
+    // 显示前3个用户名
+    const names = likeUsers.map(user => user.author).join('、');
+    return `${names}、${count}个点赞`;
+  };
+
   // 如果点赞功能被禁用，不渲染
   if (!siteConfig.likes.enabled) {
     return null;
   }
 
+  // 显示用户列表的点赞区域
+  if (showUsers && likeData.count > 0) {
+    return (
+      <div 
+        onClick={handleLike}
+        className={cn(
+          "p-3 mt-2 bg-gray-50 dark:bg-[#2a2a2a] rounded-sm cursor-pointer transition-all duration-200 hover:bg-gray-100 dark:hover:bg-[#333333]",
+          className
+        )}
+      >
+        <div className="flex items-center gap-2 text-sm">
+          <Heart
+            className={cn(
+              "w-4 h-4 transition-all duration-300",
+              likeData.hasLiked
+                ? "fill-[#ff6b6b] text-[#ff6b6b]"
+                : "fill-transparent text-[#576b95] dark:text-[#6ab3ff]",
+              isAnimating && (likeData.hasLiked ? "scale-125" : "scale-90")
+            )}
+          />
+          <span className="text-[#576b95] dark:text-[#6ab3ff]">
+            {generateLikesText()}
+          </span>
+        </div>
+      </div>
+    );
+  }
+
+  // 普通点赞按钮
   return (
     <button
       onClick={handleLike}
       className={cn(
         "flex items-center gap-1.5 transition-all duration-200",
         likeData.hasLiked
-          ? "text-pink-500 hover:text-pink-400"
+          ? "text-[#ff6b6b] hover:text-[#ff5252]"
           : "text-inherit hover:opacity-80",
         className
       )}
@@ -258,7 +343,7 @@ export default function LikeButton({ memoId, className, onLikeDataChange, showCo
         className={cn(
           "w-4 h-4 transition-all duration-300",
           likeData.hasLiked
-            ? "fill-pink-500 text-pink-500 scale-110"
+            ? "fill-[#ff6b6b] text-[#ff6b6b] scale-110"
             : "fill-transparent text-current",
           isAnimating && (likeData.hasLiked ? "scale-125" : "scale-90")
         )}
@@ -271,3 +356,12 @@ export default function LikeButton({ memoId, className, onLikeDataChange, showCo
     </button>
   );
 }
+
+// 使用 React.memo 优化渲染性能
+export default memo(LikeButton, (prevProps, nextProps) => {
+  return (
+    prevProps.memoId === nextProps.memoId &&
+    prevProps.showCount === nextProps.showCount &&
+    prevProps.showUsers === nextProps.showUsers
+  );
+});

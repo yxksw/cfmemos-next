@@ -239,19 +239,277 @@ textarea:focus {
   margin-top: 0;
 }
 
-/* 评论输入框样式 */
-.twikoo-comments .tk-input,
+/* 评论框容器样式 - 图1样式 */
+.twikoo-comments .tk-comment-form {
+  border: 1px solid #07C160 !important;
+  border-radius: 8px !important;
+  padding: 20px !important;
+  background-color: #ffffff !important;
+  margin-top: 16px !important;
+  box-shadow: none !important;
+}
+
+/* 评论标题 */
+.twikoo-comments .tk-comment-form h3 {
+  color: #07C160 !important;
+  font-size: 16px !important;
+  font-weight: 600 !important;
+  margin-bottom: 16px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+}
+
+/* 关闭按钮 */
+.twikoo-comments .tk-comment-form h3 .tk-close {
+  color: #999 !important;
+  font-size: 18px !important;
+  cursor: pointer !important;
+  transition: color 0.2s ease !important;
+}
+
+.twikoo-comments .tk-comment-form h3 .tk-close:hover {
+  color: #666 !important;
+}
+
+/* 元数据输入区域 */
+.twikoo-comments .tk-meta-input {
+  display: flex !important;
+  gap: 10px !important;
+  margin-bottom: 15px !important;
+  flex-wrap: wrap !important;
+}
+
+.twikoo-comments .tk-meta-input input {
+  flex: 1 !important;
+  min-width: 120px !important;
+  border: 1px solid #e0e0e0 !important;
+  border-radius: 4px !important;
+  padding: 8px 12px !important;
+  font-size: 14px !important;
+  background-color: #ffffff !important;
+  color: #333 !important;
+}
+
+.twikoo-comments .tk-meta-input input:focus {
+  border-color: #07C160 !important;
+  box-shadow: 0 0 0 2px rgba(7, 193, 96, 0.1) !important;
+  outline: none !important;
+}
+
+/* 评论内容输入区 */
+.twikoo-comments .tk-content-input {
+  margin-bottom: 15px !important;
+}
+
 .twikoo-comments .tk-textarea {
-  background-color: transparent;
-  transition: background-color 0.2s ease;
+  width: 100% !important;
+  min-height: 100px !important;
+  resize: vertical !important;
+  border: 1px solid #e0e0e0 !important;
+  border-radius: 4px !important;
+  padding: 10px 12px !important;
+  font-size: 14px !important;
+  background-color: #ffffff !important;
+  color: #333 !important;
+  font-family: inherit !important;
+}
+
+.twikoo-comments .tk-textarea:focus {
+  border-color: #07C160 !important;
+  box-shadow: 0 0 0 2px rgba(7, 193, 96, 0.1) !important;
+  outline: none !important;
+}
+
+/* 功能按钮区域 */
+.twikoo-comments .tk-row {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  margin-top: 15px !important;
+}
+
+/* 表情按钮 */
+.twikoo-comments .tk-emoji-btn {
+  display: flex !important;
+  align-items: center !important;
+  gap: 4px !important;
+  padding: 6px 12px !important;
+  border: 1px solid #e0e0e0 !important;
+  border-radius: 4px !important;
+  background-color: #ffffff !important;
+  color: #666 !important;
+  cursor: pointer !important;
+  transition: all 0.2s ease !important;
+  font-size: 14px !important;
+}
+
+.twikoo-comments .tk-emoji-btn:hover {
+  border-color: #07C160 !important;
+  color: #07C160 !important;
+}
+
+/* 提交按钮区域 */
+.twikoo-comments .tk-submit-area {
+  display: flex !important;
+  gap: 12px !important;
+}
+
+/* 发表评论按钮 */
+.twikoo-comments .tk-submit {
+  background-color: #07C160 !important;
+  color: white !important;
+  border: none !important;
+  border-radius: 4px !important;
+  padding: 8px 20px !important;
+  font-size: 14px !important;
+  font-weight: 500 !important;
+  cursor: pointer !important;
+  transition: all 0.2s ease !important;
+}
+
+.twikoo-comments .tk-submit:hover {
+  background-color: #06a950 !important;
+  transform: translateY(-1px) !important;
+  box-shadow: 0 2px 8px rgba(7, 193, 96, 0.3) !important;
+}
+
+/* 取消按钮 */
+.twikoo-comments .tk-cancel {
+  background-color: #f0f0f0 !important;
+  color: #666 !important;
+  border: 1px solid #e0e0e0 !important;
+  border-radius: 4px !important;
+  padding: 8px 20px !important;
+  font-size: 14px !important;
+  cursor: pointer !important;
+  transition: all 0.2s ease !important;
+}
+
+.twikoo-comments .tk-cancel:hover {
+  background-color: #e0e0e0 !important;
+  color: #333 !important;
+}
+
+/* 评论列表样式 */
+.twikoo-comments .tk-comment {
+  padding: 16px 0 !important;
+  border-bottom: 1px solid #f0f0f0 !important;
+}
+
+.twikoo-comments .tk-comment:last-child {
+  border-bottom: none !important;
+}
+
+/* 评论头像 */
+.twikoo-comments .tk-avatar {
+  width: 36px !important;
+  height: 36px !important;
+  border-radius: 50% !important;
+  margin-right: 10px !important;
+}
+
+/* 评论内容 */
+.twikoo-comments .tk-content {
+  font-size: 14px !important;
+  line-height: 1.6 !important;
+  margin-top: 8px !important;
+  color: #333 !important;
+}
+
+/* 评论元数据 */
+.twikoo-comments .tk-meta {
+  display: flex !important;
+  align-items: center !important;
+  gap: 10px !important;
+  margin-bottom: 8px !important;
+}
+
+.twikoo-comments .tk-nick {
+  font-weight: 500 !important;
+  color: #576b95 !important;
+  font-size: 14px !important;
+}
+
+.twikoo-comments .tk-time {
+  font-size: 12px !important;
+  color: #999 !important;
+}
+
+/* 评论操作按钮 */
+.twikoo-comments .tk-action {
+  display: flex !important;
+  gap: 16px !important;
+  margin-top: 8px !important;
+  font-size: 12px !important;
+  color: #999 !important;
+}
+
+.twikoo-comments .tk-action a {
+  color: #999 !important;
+  transition: color 0.2s ease !important;
+}
+
+.twikoo-comments .tk-action a:hover {
+  color: #07C160 !important;
 }
 
 /* 深色模式适配 */
-.dark .twikoo-comments .tk-input,
-.dark .twikoo-comments .tk-textarea {
+.dark .twikoo-comments .tk-comment-form {
+  border-color: #07C160 !important;
   background-color: #2d2d2d !important;
+}
+
+.dark .twikoo-comments .tk-comment-form h3 {
+  color: #07C160 !important;
+}
+
+.dark .twikoo-comments .tk-meta-input input {
+  background-color: #3d3d3d !important;
   color: #e0e0e0 !important;
   border-color: #404040 !important;
+}
+
+.dark .twikoo-comments .tk-meta-input input:focus {
+  border-color: #07C160 !important;
+  box-shadow: 0 0 0 2px rgba(7, 193, 96, 0.2) !important;
+}
+
+.dark .twikoo-comments .tk-textarea {
+  background-color: #3d3d3d !important;
+  color: #e0e0e0 !important;
+  border-color: #404040 !important;
+}
+
+.dark .twikoo-comments .tk-textarea:focus {
+  border-color: #07C160 !important;
+  box-shadow: 0 0 0 2px rgba(7, 193, 96, 0.2) !important;
+}
+
+.dark .twikoo-comments .tk-emoji-btn {
+  background-color: #3d3d3d !important;
+  border-color: #404040 !important;
+  color: #b0b0b0 !important;
+}
+
+.dark .twikoo-comments .tk-emoji-btn:hover {
+  border-color: #07C160 !important;
+  color: #07C160 !important;
+}
+
+.dark .twikoo-comments .tk-cancel {
+  background-color: #3d3d3d !important;
+  border-color: #404040 !important;
+  color: #b0b0b0 !important;
+}
+
+.dark .twikoo-comments .tk-cancel:hover {
+  background-color: #4d4d4d !important;
+  color: #e0e0e0 !important;
+}
+
+.dark .twikoo-comments .tk-comment {
+  border-bottom-color: #404040 !important;
 }
 
 .dark .twikoo-comments .tk-content {
@@ -266,22 +524,30 @@ textarea:focus {
   color: #888 !important;
 }
 
-.dark .twikoo-comments .tk-submit {
-  background-color: #07c160 !important;
-}
-
-/* 评论区域背景 */
-.dark .twikoo-comments .tk-main {
-  background-color: transparent !important;
-}
-
-/* 评论框边距调整 */
-.twikoo-comments .tk-meta-input {
-  margin-bottom: 0.5rem;
-}
-
-.twikoo-comments .tk-row {
-  margin-top: 0.5rem;
+/* 响应式设计 */
+@media (max-width: 768px) {
+  .twikoo-comments .tk-meta-input {
+    flex-direction: column !important;
+  }
+  
+  .twikoo-comments .tk-meta-input input {
+    width: 100% !important;
+  }
+  
+  .twikoo-comments .tk-row {
+    flex-direction: column !important;
+    align-items: stretch !important;
+    gap: 12px !important;
+  }
+  
+  .twikoo-comments .tk-submit-area {
+    justify-content: space-between !important;
+  }
+  
+  .twikoo-comments .tk-submit,
+  .twikoo-comments .tk-cancel {
+    flex: 1 !important;
+  }
 }
 
 /* 模态框背景模糊 */
@@ -451,4 +717,19 @@ textarea:focus {
     --text-secondary: #ffffff;
     --text-tertiary: #cccccc;
   }
+}
+
+/* 音乐播放器动画 */
+@keyframes music-bar {
+  0%, 100% {
+    transform: scaleY(0.3);
+  }
+  50% {
+    transform: scaleY(1);
+  }
+}
+
+.animate-music-bar {
+  animation: music-bar 0.8s ease-in-out infinite;
+  transform-origin: bottom;
 }

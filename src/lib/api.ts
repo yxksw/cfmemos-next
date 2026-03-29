@@ -3,21 +3,48 @@ import type { Memo, CreateMemoRequest, UpdateMemoRequest, ApiResponse } from "@/
 
 const API_BASE = siteConfig.api.baseUrl;
 
+// 请求缓存
+type CacheData = Memo[] | Memo | boolean | null;
+interface CacheEntry {
+  data: CacheData;
+  timestamp: number;
+}
+const requestCache = new Map<string, CacheEntry>();
+const CACHE_DURATION = 5 * 60 * 1000; // 5分钟缓存
+
 // 通用请求函数
 async function fetchApi<T>(
   endpoint: string,
-  options?: RequestInit
+  options?: RequestInit,
+  useCache: boolean = false
 ): Promise<ApiResponse<T>> {
   const url = `${API_BASE}${endpoint}`;
+  const cacheKey = `${url}-${JSON.stringify(options)}`;
+  
+  // 检查缓存
+  if (useCache && requestCache.has(cacheKey)) {
+    const cached = requestCache.get(cacheKey)!;
+    if (Date.now() - cached.timestamp < CACHE_DURATION) {
+      return { data: cached.data as T };
+    }
+    requestCache.delete(cacheKey);
+  }
   
   try {
+    // 添加超时控制
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 10000); // 10秒超时
+    
     const response = await fetch(url, {
       ...options,
+      signal: controller.signal,
       headers: {
         "Content-Type": "application/json",
         ...options?.headers,
       },
     });
+    
+    clearTimeout(timeoutId);
 
     if (!response.ok) {
       const error = await response.json().catch(() => ({}));
@@ -28,8 +55,20 @@ async function fetchApi<T>(
     }
 
     const data = await response.json();
+    
+    // 缓存数据
+    if (useCache) {
+      requestCache.set(cacheKey, { data, timestamp: Date.now() });
+    }
+    
     return { data };
   } catch (error) {
+    if (error instanceof Error && error.name === 'AbortError') {
+      return {
+        error: "请求超时，请稍后重试",
+        code: "TIMEOUT_ERROR",
+      };
+    }
     return {
       error: error instanceof Error ? error.message : "网络请求失败",
       code: "NETWORK_ERROR",
@@ -37,7 +76,12 @@ async function fetchApi<T>(
   }
 }
 
-// 获取说说列表
+// 清除缓存
+export function clearApiCache() {
+  requestCache.clear();
+}
+
+// 获取说说列表（带缓存）
 export async function getMemos(params?: {
   limit?: number;
   offset?: number;
@@ -51,7 +95,9 @@ export async function getMemos(params?: {
   const query = searchParams.toString();
   const endpoint = `/memo${query ? `?${query}` : ""}`;
   
-  const response = await fetchApi<Memo[]>(endpoint);
+  // 第一页数据使用缓存
+  const useCache = !params?.offset || params.offset === 0;
+  const response = await fetchApi<Memo[]>(endpoint, {}, useCache);
   
   if (response.error) {
     console.error("获取说说列表失败:", response.error);
@@ -136,16 +182,66 @@ export async function deleteMemo(
   return true;
 }
 
-// 搜索说说
-export async function searchMemos(query: string): Promise<Memo[]> {
-  const response = await fetchApi<Memo[]>(`/memo/search?q=${encodeURIComponent(query)}`);
+// 搜索选项接口
+export interface SearchOptions {
+  content?: boolean;  // 搜索内容
+  tags?: boolean;     // 搜索标签
+  username?: boolean; // 搜索用户名
+}
+
+// 搜索说说 - 支持多维度搜索
+export async function searchMemos(
+  query: string,
+  options: SearchOptions = { content: true, tags: true, username: true }
+): Promise<Memo[]> {
+  const params = new URLSearchParams();
+  params.append('q', query);
+  
+  // 根据文档添加搜索维度参数
+  if (options.content) params.append('content', 'true');
+  if (options.tags) params.append('tags', 'true');
+  if (options.username) params.append('username', 'true');
+  
+  const endpoint = `/memo/search?${params.toString()}`;
+  
+  const response = await fetchApi<Memo[]>(endpoint);
   
   if (response.error) {
-    console.error("搜索说说失败:", response.error);
     return [];
   }
   
-  return response.data || [];
+  // 如果后端返回结果，使用后端结果
+  if (response.data && response.data.length > 0) {
+    return response.data;
+  }
+  
+  // 后端返回空数组，尝试前端本地搜索
+  return localSearchMemos(query);
+}
+
+// 前端本地搜索 - 获取所有说说并在前端过滤
+async function localSearchMemos(query: string): Promise<Memo[]> {
+  try {
+    // 获取所有说说（限制100条）
+    const allMemos = await getMemos({ limit: 100 });
+    
+    const lowerQuery = query.toLowerCase();
+    const results = allMemos.filter(memo => {
+      // 搜索内容
+      if (memo.content.toLowerCase().includes(lowerQuery)) return true;
+      // 搜索标签
+      if (memo.tagList?.some(tag => tag.toLowerCase().includes(lowerQuery))) return true;
+      // 搜索作者
+      if (memo.creatorName?.toLowerCase().includes(lowerQuery)) return true;
+      return false;
+    });
+    
+    console.log("前端本地搜索结果:", results.length, "条");
+    return results;
+  } catch (error) {
+    console.error("前端本地搜索失败:", error);
+    return [];
+  }
 }
 
 // 获取统计数据

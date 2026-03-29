@@ -1,12 +1,30 @@
 "use client";
 
 import { useEffect, useRef } from "react";
+import { siteConfig } from "@/config/site";
+
+// 定义 window 扩展接口
+interface WindowWithLive2D extends Window {
+  initWidget?: (config: {
+    waifuPath: string;
+    cdnPath: string;
+    tools: string[];
+    dragEnable: boolean;
+    dragDirection: string[];
+    switchType: string;
+  }) => void;
+}
 
 export default function Live2DWidget() {
   const containerRef = useRef<HTMLDivElement>(null);
   const initializedRef = useRef(false);
 
   useEffect(() => {
+    // 如果 Live2D 被禁用，不执行任何操作
+    if (!siteConfig.live2d.enabled) {
+      return;
+    }
+
     // 只在桌面端显示
     if (typeof window === "undefined" || screen.width < 768) return;
     if (initializedRef.current) return;
@@ -71,8 +89,9 @@ export default function Live2DWidget() {
         initializedRef.current = true;
         // 等待脚本加载完成
         setTimeout(() => {
-          if (typeof window !== "undefined" && (window as any).initWidget) {
-            (window as any).initWidget({
+          const windowWithLive2D = window as WindowWithLive2D;
+          if (windowWithLive2D.initWidget) {
+            windowWithLive2D.initWidget({
               waifuPath: config.path.tipsJsonPath,
               cdnPath: config.path.modelPath,
               tools: config.tools,
@@ -95,6 +114,11 @@ export default function Live2DWidget() {
       }
     };
   }, []);
+
+  // 如果 Live2D 被禁用，不渲染任何内容
+  if (!siteConfig.live2d.enabled) {
+    return null;
+  }
 
   return (
     <>

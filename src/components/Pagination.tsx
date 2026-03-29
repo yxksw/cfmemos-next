@@ -1,18 +1,15 @@
-"use client";
-
+import Link from "next/link";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface PaginationProps {
   currentPage: number;
   totalPages: number;
-  onPageChange: (page: number) => void;
 }
 
 export default function Pagination({
   currentPage,
   totalPages,
-  onPageChange,
 }: PaginationProps) {
   if (totalPages <= 1) return null;
 
@@ -62,53 +59,64 @@ export default function Pagination({
   return (
     <div className="flex justify-center items-center gap-1.5 mt-5 py-2.5 flex-wrap">
       {/* 上一页按钮 */}
-      <button
-        onClick={() => onPageChange(currentPage - 1)}
-        disabled={currentPage === 1}
-        className={cn(
-          "px-2.5 py-1.5 text-sm rounded border transition-colors bg-white dark:bg-[#2d2d2d] flex items-center gap-1",
-          currentPage === 1
-            ? "text-gray-400 border-gray-200 dark:border-gray-700 cursor-not-allowed"
-            : "text-gray-700 dark:text-gray-300 border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-800"
-        )}
-      >
-        <ChevronLeft className="w-4 h-4" />
-        <span className="hidden sm:inline">上一页</span>
-      </button>
+      {currentPage > 1 ? (
+        <Link
+          href={`/?page=${currentPage - 1}`}
+          className="px-2.5 py-1.5 text-sm rounded border transition-colors bg-white dark:bg-[#2d2d2d] flex items-center gap-1 text-gray-700 dark:text-gray-300 border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-800"
+        >
+          <ChevronLeft className="w-4 h-4" />
+          <span className="hidden sm:inline">上一页</span>
+        </Link>
+      ) : (
+        <button
+          disabled
+          className="px-2.5 py-1.5 text-sm rounded border transition-colors bg-white dark:bg-[#2d2d2d] flex items-center gap-1 text-gray-400 border-gray-200 dark:border-gray-700 cursor-not-allowed"
+        >
+          <ChevronLeft className="w-4 h-4" />
+          <span className="hidden sm:inline">上一页</span>
+        </button>
+      )}
 
       {/* 页码按钮 */}
       {pageNumbers.map((page, index) => (
-        <button
-          key={index}
-          onClick={() => typeof page === "number" && onPageChange(page)}
-          disabled={page === "..." || page === currentPage}
-          className={cn(
-            "min-w-[36px] px-2.5 py-1.5 text-sm rounded border transition-colors",
-            page === currentPage
-              ? "bg-[#07c160] text-white border-[#07c160]"
-              : page === "..."
-              ? "bg-transparent border-transparent text-gray-500 cursor-default"
-              : "bg-white dark:bg-[#2d2d2d] text-gray-700 dark:text-gray-300 border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-800"
+        <div key={index}>
+          {page === "..." ? (
+            <span className="min-w-[36px] px-2.5 py-1.5 text-sm rounded border border-transparent text-gray-500 cursor-default">
+              {page}
+            </span>
+          ) : page === currentPage ? (
+            <span className="min-w-[36px] px-2.5 py-1.5 text-sm rounded border bg-[#07c160] text-white border-[#07c160]">
+              {page}
+            </span>
+          ) : (
+            <Link
+              href={`/?page=${page}`}
+              className="min-w-[36px] px-2.5 py-1.5 text-sm rounded border transition-colors bg-white dark:bg-[#2d2d2d] text-gray-700 dark:text-gray-300 border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-800 inline-block text-center"
+            >
+              {page}
+            </Link>
           )}
-        >
-          {page}
-        </button>
+        </div>
       ))}
 
       {/* 下一页按钮 */}
-      <button
-        onClick={() => onPageChange(currentPage + 1)}
-        disabled={currentPage >= totalPages}
-        className={cn(
-          "px-2.5 py-1.5 text-sm rounded border transition-colors bg-white dark:bg-[#2d2d2d] flex items-center gap-1",
-          currentPage >= totalPages
-            ? "text-gray-400 border-gray-200 dark:border-gray-700 cursor-not-allowed"
-            : "text-gray-700 dark:text-gray-300 border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-800"
-        )}
-      >
-        <span className="hidden sm:inline">下一页</span>
-        <ChevronRight className="w-4 h-4" />
-      </button>
+      {currentPage < totalPages ? (
+        <Link
+          href={`/?page=${currentPage + 1}`}
+          className="px-2.5 py-1.5 text-sm rounded border transition-colors bg-white dark:bg-[#2d2d2d] flex items-center gap-1 text-gray-700 dark:text-gray-300 border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-800"
+        >
+          <span className="hidden sm:inline">下一页</span>
+          <ChevronRight className="w-4 h-4" />
+        </Link>
+      ) : (
+        <button
+          disabled
+          className="px-2.5 py-1.5 text-sm rounded border transition-colors bg-white dark:bg-[#2d2d2d] flex items-center gap-1 text-gray-400 border-gray-200 dark:border-gray-700 cursor-not-allowed"
+        >
+          <span className="hidden sm:inline">下一页</span>
+          <ChevronRight className="w-4 h-4" />
+        </button>
+      )}
     </div>
   );
 }

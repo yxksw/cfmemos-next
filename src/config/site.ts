@@ -28,8 +28,25 @@ export const siteConfig = {
   
   // 音乐播放器配置
   music: {
-    enabled: true,
+    enabled: false,
     api: "https://meting2.050815.xyz/api?server=netease&type=playlist&id=13681647281",
+  },
+
+  // 新音乐播放器配置（简化版）
+  newMusicPlayer: {
+    enabled: true, // 暂时禁用，需要配置支持CORS的音频源
+    // 支持网易云音乐ID（纯数字）或自定义音乐链接
+    // 重要：音频文件必须支持CORS跨域，否则会被浏览器阻止
+    // 推荐方案：
+    // 1. 使用自己的服务器或CDN（如七牛云、阿里云OSS）
+    // 2. 使用支持音频流的服务
+    // 3. GitHub/jsDelivr 等可能因跨域策略无法播放
+    musicUrl: "https://cdn.261770.xyz/music/%E4%B8%80%E5%8F%A5%E8%AF%9D%E5%BD%A2%E5%AE%B9%E4%B8%8D%E4%BA%86%E7%BB%88%E6%9E%81%E7%AC%94%E8%AE%B0%20-%20%E5%BA%94%E6%9C%89%E6%A3%A0%E3%80%81%E5%8F%B6%E8%90%BD%E6%A2%A6%E4%B8%AD%E3%80%81%E7%BB%AF%E8%A8%80%E3%80%81%E5%B0%8F%E5%B1%B1xl%E3%80%81%E9%9C%84%E9%95%81%E3%80%81%E9%83%AD%E6%9B%A6%E9%98%B3%E3%80%81%E5%A0%87%E5%A2%A8%E5%AE%89%E6%AD%8C%E3%80%81%E5%A4%A9%E7%BD%97.mp3", // 使用HTTPS
+  },
+
+  // Live2D 看板娘配置
+  live2d: {
+    enabled: true,
   },
   
   // RSS 配置

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, memo, useCallback, useMemo } from "react";
 import type { Memo } from "@/types/memo";
 import { formatDateTime, getImageGridClass } from "@/lib/utils";
 import { MoreHorizontal, MapPin, Music, Edit3, Trash2, Heart, MessageCircle } from "lucide-react";
@@ -16,7 +16,7 @@ interface MemoCardProps {
   isLoggedIn?: boolean;
 }
 
-export default function MemoCard({
+function MemoCard({
   memo,
   onCommentClick,
   onEditClick,
@@ -30,25 +30,31 @@ export default function MemoCard({
   const menuRef = useRef<HTMLDivElement>(null);
   const buttonRef = useRef<HTMLButtonElement>(null);
   
-  const images = memo.resourceList
-    .filter(r => r.type.startsWith("image/"))
-    .slice(0, 9);
-  
-  const imageCount = images.length;
-  const gridClass = getImageGridClass(imageCount);
-  
-  // 提取位置和音乐信息
-  const locationMatch = memo.content.match(/位置[:：]\s*(.+)/);
-  const location = locationMatch ? locationMatch[1].trim() : null;
-  
-  const musicMatch = memo.content.match(/音乐[:：]\s*(.+)/);
-  const music = musicMatch ? musicMatch[1].trim() : null;
-  
-  // 清理内容
-  const cleanContent = memo.content
-    .replace(/位置[:：]\s*.+\n?/g, "")
-    .replace(/音乐[:：]\s*.+\n?/g, "")
-    .trim();
+  // 使用 useMemo 缓存计算结果
+  const { location, music, cleanContent, images, imageCount, gridClass } = useMemo(() => {
+    // 提取位置和音乐信息
+    const locationMatch = memo.content.match(/位置[:：]\s*(.+)/);
+    const location = locationMatch ? locationMatch[1].trim() : null;
+    
+    const musicMatch = memo.content.match(/音乐[:：]\s*(.+)/);
+    const music = musicMatch ? musicMatch[1].trim() : null;
+    
+    // 清理内容
+    const cleanContent = memo.content
+      .replace(/位置[:：]\s*.+\n?/g, "")
+      .replace(/音乐[:：]\s*.+\n?/g, "")
+      .trim();
+    
+    // 图片处理
+    const images = memo.resourceList
+      .filter(r => r.type.startsWith("image/"))
+      .slice(0, 9);
+    
+    const imageCount = images.length;
+    const gridClass = getImageGridClass(imageCount);
+    
+    return { location, music, cleanContent, images, imageCount, gridClass };
+  }, [memo.content, memo.resourceList]);
 
   const openLightbox = (src: string) => {
     setLightboxImage(src);
@@ -101,10 +107,20 @@ export default function MemoCard({
   };
 
   // 处理评论点击
-  const handleCommentClick = () => {
+  const handleCommentClick = useCallback(() => {
     setShowActionMenu(false);
     onCommentClick?.(memo.id);
-  };
+  }, [onCommentClick, memo.id]);
+
+  // 处理编辑点击
+  const handleEditClick = useCallback(() => {
+    onEditClick?.(memo);
+  }, [onEditClick, memo]);
+
+  // 处理删除点击
+  const handleDeleteClick = useCallback(() => {
+    onDeleteClick?.(memo.id);
+  }, [onDeleteClick, memo.id]);
 
   return (
     <>
@@ -131,14 +147,14 @@ export default function MemoCard({
           {isLoggedIn && (
             <div className="flex items-center gap-2">
               <button
-                onClick={() => onEditClick?.(memo)}
+                onClick={handleEditClick}
                 className="p-1.5 text-gray-400 hover:text-[#07c160] transition-colors"
                 title="编辑"
               >
                 <Edit3 className="w-4 h-4" />
               </button>
               <button
-                onClick={() => onDeleteClick?.(memo.id)}
+                onClick={handleDeleteClick}
                 className="p-1.5 text-gray-400 hover:text-red-500 transition-colors"
                 title="删除"
               >
@@ -186,23 +202,19 @@ export default function MemoCard({
           </div>
         )}
 
+        {/* 点赞和评论区域 */}
+        {siteConfig.likes.enabled && (
+          <div className="ml-10">
+            <LikeButton
+              memoId={memo.id}
+              showUsers={true}
+              onLikeDataChange={setLikeData}
+            />
+          </div>
+        )}
+
         {/* 底部信息栏 */}
         <div className="flex justify-end items-center py-2 text-xs text-gray-500 dark:text-gray-400 ml-10">
-          {/* 点赞数显示 - 在三个点左边 */}
-          {siteConfig.likes.enabled && (
-            <div className="flex items-center gap-1 mr-3">
-              <LikeButton
-                memoId={memo.id}
-                className={cn(
-                  "text-gray-500 dark:text-gray-400 hover:text-pink-500 dark:hover:text-pink-400",
-                  likeData.hasLiked && "text-pink-500 dark:text-pink-500"
-                )}
-                onLikeDataChange={setLikeData}
-                showCount={true}
-              />
-            </div>
-          )}
-
           {/* 三个点按钮 */}
           <div className="relative" ref={menuRef}>
             <button
@@ -292,3 +304,15 @@ export default function MemoCard({
     </>
   );
 }
+
+// 使用 React.memo 优化渲染性能
+export default memo(MemoCard, (prevProps, nextProps) => {
+  // 只有当这些属性变化时才重新渲染
+  return (
+    prevProps.memo.id === nextProps.memo.id &&
+    prevProps.memo.content === nextProps.memo.content &&
+    prevProps.memo.createdTs === nextProps.memo.createdTs &&
+    prevProps.memo.resourceList.length === nextProps.memo.resourceList.length &&
+    prevProps.isLoggedIn === nextProps.isLoggedIn
+  );
+});

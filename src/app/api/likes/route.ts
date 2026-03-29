@@ -30,11 +30,19 @@ function getUserFingerprint(request: NextRequest): string {
 async function testDatabaseConnection(): Promise<boolean> {
   if (!isDatabaseAvailable) return false;
   try {
+    // 设置较短的超时时间
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 3000);
+    
     await sql`SELECT 1`;
+    clearTimeout(timeoutId);
     return true;
   } catch {
     isDatabaseAvailable = false;
-    console.log("[API] Database unavailable, using local storage fallback");
+    // 只在第一次失败时输出日志
+    if (isDatabaseAvailable !== false) {
+      console.log("[API] Database unavailable, using local storage fallback");
+    }
     return false;
   }
 }
@@ -85,8 +93,7 @@ export async function GET(request: NextRequest) {
       hasLiked,
     });
   } catch (error) {
-    console.error("[API] Error getting likes:", error);
-    // 出错时使用本地存储
+    // 静默处理数据库错误，使用本地存储
     const { searchParams } = new URL(request.url);
     const memoId = parseInt(searchParams.get("memoId") || "0");
     const data = getLikeData(memoId);
